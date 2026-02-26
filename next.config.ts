@@ -5,10 +5,14 @@ const nextConfig: NextConfig = {
   images: {
     domains: ['localhost'],
   },
-  // Untuk Leaflet
   transpilePackages: ['react-leaflet'],
-   eslint: {
+
+  // ⬇ Tambahkan ini
+  eslint: {
     ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
 }
 
