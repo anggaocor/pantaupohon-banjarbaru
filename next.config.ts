@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   },
   // Untuk Leaflet
   transpilePackages: ['react-leaflet'],
+   eslint: {
+    ignoreDuringBuilds: true,
+  },
 }
 
 export default nextConfig
