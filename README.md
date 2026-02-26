@@ -1,2 +1,2 @@
-# siabang
-Sistem informasi pemangkasan dan penebangan Kota Banjarbaru
+# pantaupohon-banjarbaru
+Sistem informasi pohon Kota Banjarbaru

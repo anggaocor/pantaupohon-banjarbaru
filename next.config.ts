@@ -1,30 +1,12 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
   images: {
-    domains: ['mxwliocmvvthuylwvooq.supabase.co'], // domain supabase storage
+    domains: ['localhost'],
   },
-};
-
-export default nextConfig;
-
-// Redirects
-export async function redirects() {
-  return [
-    {
-      source: '/InputPage',
-      destination: '/login',
-      permanent: false,
-    },
-  ];
+  // Untuk Leaflet
+  transpilePackages: ['react-leaflet'],
 }
 
-// Rewrites
-export async function rewrites() {
-  return [
-    {
-      source: '/InputPage',
-      destination: '/posts', // ganti sesuai kebutuhan
-    },
-  ];
-}
+export default nextConfig
