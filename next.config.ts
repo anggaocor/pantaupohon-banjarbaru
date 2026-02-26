@@ -7,10 +7,10 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: ['react-leaflet'],
 
-  // ⬇ Tambahkan ini
   eslint: {
     ignoreDuringBuilds: true,
   },
+
   typescript: {
     ignoreBuildErrors: true,
   },
