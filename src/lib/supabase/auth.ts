@@ -9,7 +9,7 @@ export async function signIn(email: string, password: string) {
   return { data, error }
 }
 
-export async function signUp(email: string, password: string, metadata?: any) {
+export async function signUp(email: string, password: string, metadata?: Record<string, unknown>) {
   const supabase = createClient()
   const { data, error } = await supabase.auth.signUp({
     email,
