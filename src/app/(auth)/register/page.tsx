@@ -52,9 +52,12 @@ export default function RegisterPage() {
         toast.success('Registrasi berhasil! Anda akan dialihkan ke dashboard.')
         router.push('/dashboard')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Register error:', error)
-      toast.error(error.message || 'Registrasi gagal. Silakan coba lagi.')
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error 
+        ? String((error as { message: string }).message)
+        : 'Registrasi gagal. Silakan coba lagi.'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }

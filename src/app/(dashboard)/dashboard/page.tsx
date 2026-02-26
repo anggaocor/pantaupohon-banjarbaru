@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Card from '@/src/components/ui/Card'
 import BarChart from '@/src/components/charts/BarChart'
 import MapComponent from '@/src/components/maps/MapComponent'
 import { createClient } from '@/src/lib/supabase/client'
@@ -12,30 +11,20 @@ import {
   Scissors, 
   Axe, 
   MapPin, 
-  TrendingUp, 
   Activity, 
   RefreshCw,
   Calendar,
   ArrowUp,
   ArrowDown,
-  Loader2,
   ChevronDown,
-  Eye,
   Clock,
   CheckCircle,
-  AlertCircle,
   BarChart3,
-  PieChart,
-  Users,
-  TreePine,
-  Home,
-  Mail,
-  Footprints,
-  User
+  TreePine
 } from 'lucide-react'
 import Link from 'next/link'
 import moment from 'moment'
-import 'moment/locale/id'
+import 'moment/locale/id.js'
 
 moment.locale('id')
 
@@ -81,8 +70,8 @@ interface RecentActivity {
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<unknown>(null)
+  const [profile, setProfile] = useState<unknown>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalPermohonan: 0,
     totalPemeliharaan: 0,
@@ -93,19 +82,17 @@ export default function DashboardPage() {
     pemangkasanGrowth: 0,
     penebanganGrowth: 0,
   })
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
-  const [comparisonData, setComparisonData] = useState<any[]>([])
-  const [pohonData, setPohonData] = useState<any[]>([])
+  const [comparisonData, setComparisonData] = useState<unknown[]>([])
+  const [pohonData, setPohonData] = useState<unknown[]>([])
   const [mapLocations, setMapLocations] = useState<MapLocation[]>([])
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
   const [timeRange, setTimeRange] = useState('month')
-  const [selectedStat, setSelectedStat] = useState<string | null>(null)
   const [totalData, setTotalData] = useState(0)
-  
-  const supabase = createClient()
 
   // Cek session user
   useEffect(() => {
+    const supabase = createClient()
+    
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -124,12 +111,187 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      const supabase = createClient()
+      try {
+        setLoading(true)
+        
+        // Hitung tanggal berdasarkan timeRange
+        const now = new Date()
+        let startDate = new Date()
+        let previousStartDate = new Date()
+        
+        switch(timeRange) {
+          case 'week':
+            startDate.setDate(now.getDate() - 7)
+            previousStartDate.setDate(now.getDate() - 14)
+            break
+          case 'month':
+            startDate.setMonth(now.getMonth() - 1)
+            previousStartDate.setMonth(now.getMonth() - 2)
+            break
+          case 'quarter':
+            startDate.setMonth(now.getMonth() - 3)
+            previousStartDate.setMonth(now.getMonth() - 6)
+            break
+          case 'year':
+            startDate.setFullYear(now.getFullYear() - 1)
+            previousStartDate.setFullYear(now.getFullYear() - 2)
+            break
+          default:
+            startDate = new Date(0)
+            previousStartDate = new Date(0)
+        }
+
+        const startDateStr = startDate.toISOString()
+        const previousStartDateStr = previousStartDate.toISOString()
+
+        // Fetch semua data dari tabel pemantauan_pohon
+        const { data: allData, error: allError } = await supabase
+          .from('pemantauan_pohon')
+          .select('*')
+
+        if (allError) throw allError
+
+        // Hitung total data
+        setTotalData(allData?.length || 0)
+
+        // Hitung statistik berdasarkan periode
+        const currentData = allData?.filter(item => 
+          new Date(item.created_at) >= new Date(startDateStr)
+        ) || []
+
+        const previousData = allData?.filter(item => 
+          new Date(item.created_at) >= new Date(previousStartDateStr) &&
+          new Date(item.created_at) < new Date(startDateStr)
+        ) || []
+
+        // Hitung total periode sekarang
+        const totalPermohonan = currentData.filter(item => item.type === 'permohonan').length
+        const totalPemeliharaan = currentData.filter(item => item.type === 'pemeliharaan').length
+        const totalPohonDipangkas = currentData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0)
+        const totalPohonDitebang = currentData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
+        
+        // Hitung total periode sebelumnya
+        const prevPermohonan = previousData.filter(item => item.type === 'permohonan').length
+        const prevPemeliharaan = previousData.filter(item => item.type === 'pemeliharaan').length
+        const prevPemangkasan = previousData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0)
+        const prevPenebangan = previousData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
+        
+        // Hitung growth secara dinamis
+        const calculateGrowth = (current: number, previous: number) => {
+          if (previous === 0) return current > 0 ? 100 : 0
+          return Math.round(((current - previous) / previous) * 100)
+        }
+
+        setStats({
+          totalPermohonan,
+          totalPemeliharaan,
+          totalPohonDipangkas,
+          totalPohonDitebang,
+          permohonanGrowth: calculateGrowth(totalPermohonan, prevPermohonan),
+          pemeliharaanGrowth: calculateGrowth(totalPemeliharaan, prevPemeliharaan),
+          pemangkasanGrowth: calculateGrowth(totalPohonDipangkas, prevPemangkasan),
+          penebanganGrowth: calculateGrowth(totalPohonDitebang, prevPenebangan)
+        })
+
+        // Process monthly data untuk chart (6 bulan terakhir)
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+        const monthlyStats: MonthlyData[] = []
+        
+        for (let i = 5; i >= 0; i--) {
+          const month = new Date()
+          month.setMonth(month.getMonth() - i)
+          const monthStart = new Date(month.getFullYear(), month.getMonth(), 1)
+          const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0)
+          
+          const monthData = allData?.filter(item => {
+            const date = new Date(item.created_at)
+            return date >= monthStart && date <= monthEnd
+          }) || []
+
+          monthlyStats.push({
+            month: months[month.getMonth()],
+            permohonan: monthData.filter(item => item.type === 'permohonan').length,
+            pemeliharaan: monthData.filter(item => item.type === 'pemeliharaan').length,
+            pemangkasan: monthData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0),
+            penebangan: monthData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
+          })
+        }
+
+        setComparisonData(monthlyStats.map(item => ({
+          name: item.month,
+          permohonan: item.permohonan,
+          pemeliharaan: item.pemeliharaan
+        })))
+
+        // Data untuk grafik pohon
+        setPohonData(monthlyStats.map(item => ({
+          name: item.month,
+          dipangkas: item.pemangkasan,
+          ditebang: item.penebangan
+        })))
+
+        // Process map locations
+        const locations = allData
+          ?.filter(item => item.koordinat && typeof item.koordinat === 'string')
+          .map(item => {
+            try {
+              const [lat, lng] = item.koordinat.split(',').map((coord: string) => parseFloat(coord.trim()))
+              if (isNaN(lat) || isNaN(lng)) return null
+              
+              return {
+                lat,
+                lng,
+                name: item.nama || 'Lokasi Tanpa Nama',
+                description: item.keterangan || 'Tidak ada keterangan',
+                type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
+                status: item.status as 'pending' | 'completed' | 'in_progress',
+                date: item.created_at,
+                jumlah_pohon: item.jumlah_pohon || 0
+              }
+            } catch {
+              return null
+            }
+          })
+          .filter((loc): loc is MapLocation => loc !== null)
+          .slice(0, 50) // Batasi 50 lokasi untuk performa
+
+        setMapLocations(locations || [])
+
+        // Process recent activities
+        const activities = allData
+          ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5)
+          .map(item => ({
+            id: item.id,
+            user_name: 'Pengguna',
+            action: `${item.type === 'permohonan' ? 'Permohonan' : 
+                     item.type === 'pemeliharaan' ? 'Pemeliharaan' : 
+                     item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama}`,
+            created_at: item.created_at,
+            status: item.status as 'completed' | 'pending' | 'in_progress',
+            type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
+            location: item.alamat
+          })) || []
+
+        setRecentActivities(activities)
+
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error)
+        toast.error('Gagal memuat data dashboard: ' + error.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     if (user) {
       fetchDashboardData()
     }
   }, [timeRange, user])
 
   const fetchDashboardData = async () => {
+    const supabase = createClient()
     try {
       setLoading(true)
       

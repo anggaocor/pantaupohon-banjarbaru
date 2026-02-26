@@ -32,9 +32,12 @@ export default function LoginPage() {
         router.push('/dashboard')
         router.refresh() // Refresh untuk update middleware
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error)
-      toast.error(error.message || 'Login gagal. Periksa email dan password.')
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error 
+        ? String((error as { message: string }).message)
+        : 'Login gagal. Periksa email dan password.'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
