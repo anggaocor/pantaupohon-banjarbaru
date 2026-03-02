@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import BarChart from '@/src/components/charts/BarChart'
-import MapComponent from '@/src/components/maps/MapComponent'
+import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import moment from 'moment'
+import 'moment/locale/id'
+
 import { createClient } from '@/src/lib/supabase/client'
 import { toast } from 'sonner'
+
 import { 
   FileText, 
   Trees, 
@@ -22,11 +26,20 @@ import {
   BarChart3,
   TreePine
 } from 'lucide-react'
-import Link from 'next/link'
-import moment from 'moment'
-import 'moment/locale/id'
 
-moment.locale('id')
+/* ===========================
+   DYNAMIC IMPORT (WAJIB SSR FALSE)
+=========================== */
+
+const MapComponent = dynamic(
+  () => import('@/src/components/maps/MapComponent'),
+  { ssr: false }
+)
+
+const BarChart = dynamic(
+  () => import('@/src/components/charts/BarChart'),
+  { ssr: false }
+)
 
 interface DashboardStats {
   totalPermohonan: number
