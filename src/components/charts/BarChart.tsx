@@ -9,12 +9,32 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  Cell
 } from 'recharts'
 
 interface ChartData {
   name: string
-  [key: string]: any
+  [key: string]: string | number
+}
+
+interface TooltipPayload {
+  color: string
+  name: string
+  value: number | string
+}
+
+interface TooltipProps {
+  active?: boolean
+  payload?: TooltipPayload[]
+  label?: string
+}
+
+interface LegendPayloadEntry {
+  color?: string
+  value?: string
+}
+
+interface LegendProps {
+  payload?: LegendPayloadEntry[]
 }
 
 interface BarChartProps {
@@ -57,12 +77,12 @@ export default function BarChart({
   )
 
   // Custom tooltip untuk dark mode
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl">
           <p className="text-white font-medium mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry: TooltipPayload, index: number) => (
             <div key={index} className="flex items-center gap-2 text-sm">
               <div 
                 className="w-3 h-3 rounded-full" 
@@ -84,15 +104,16 @@ export default function BarChart({
   }
 
   // Custom legend untuk dark mode
-  const renderLegend = (props: any) => {
+  const renderLegend = (props: LegendProps) => {
     const { payload } = props
+    if (!payload) return null
     return (
       <ul className="flex flex-wrap justify-center gap-4 mt-4">
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: LegendPayloadEntry, index: number) => (
           <li key={`item-${index}`} className="flex items-center gap-2">
             <div 
               className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: entry.color }}
+              style={{ backgroundColor: entry.color || '#9CA3AF' }}
             />
             <span className="text-sm text-gray-300">
               {legendLabels ? legendLabels[index] : entry.value}
@@ -146,13 +167,13 @@ export default function BarChart({
           cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
         />
         
-        {/* Legend */}
-        {showLegend && (
-          <Legend 
-            content={renderLegend}
-            wrapperStyle={{ paddingTop: 20 }}
-          />
-        )}
+      {/* Legend dengan custom component */}
+      {showLegend && (
+        <Legend 
+          content={renderLegend}
+          wrapperStyle={{ paddingTop: 20 }}
+        />
+      )}
         
         {/* Render bars berdasarkan jumlah dataKey */}
         {keys.map((key, index) => (

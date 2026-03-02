@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/src/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 
+interface Profile {
+  id: string
+  email?: string
+  name?: string
+  avatar_url?: string
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,7 +43,7 @@ export function useAuth() {
 }
 
 export function useProfile() {
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 

@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Proteksi halaman dashboard
   const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')

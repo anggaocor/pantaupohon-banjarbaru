@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
-export async function exportToExcel(data: any[], filename: string) {
+export async function exportToExcel(data: Record<string, unknown>[], filename: string) {
   const worksheet = XLSX.utils.json_to_sheet(data)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1')
@@ -18,7 +18,7 @@ export async function exportToExcel(data: any[], filename: string) {
   saveAs(blob, `${filename}.xlsx`)
 }
 
-export function generateCSV(data: any[]) {
+export function generateCSV(data: Record<string, unknown>[]) {
   const headers = Object.keys(data[0] || {})
   const csvRows = [
     headers.join(','),

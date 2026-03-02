@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import moment from 'moment'
-import 'moment/locale/id.js'
+import 'moment/locale/id'
 
 moment.locale('id')
 
@@ -68,10 +68,19 @@ interface RecentActivity {
   location?: string
 }
 
+interface User {
+  email?: string
+  id?: string
+}
+
+interface Profile {
+  full_name?: string
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<unknown>(null)
-  const [profile, setProfile] = useState<unknown>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalPermohonan: 0,
     totalPemeliharaan: 0,
@@ -82,12 +91,14 @@ export default function DashboardPage() {
     pemangkasanGrowth: 0,
     penebanganGrowth: 0,
   })
-  const [comparisonData, setComparisonData] = useState<unknown[]>([])
-  const [pohonData, setPohonData] = useState<unknown[]>([])
-  const [mapLocations, setMapLocations] = useState<MapLocation[]>([])
+  const [comparisonData, setComparisonData] = useState<Array<{name: string, permohonan: number, pemeliharaan: number}>>([])
+  const [pohonData, setPohonData] = useState<Array<{name: string, dipangkas: number, ditebang: number}>>([])
+  const [locations, setMapLocations] = useState<MapLocation[]>([])
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
   const [timeRange, setTimeRange] = useState('month')
   const [totalData, setTotalData] = useState(0)
+  const [selectedStat, setSelectedStat] = useState<string | null>(null)
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
 
   // Cek session user
   useEffect(() => {
@@ -110,6 +121,7 @@ export default function DashboardPage() {
     checkUser()
   }, [])
 
+  // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       const supabase = createClient()
@@ -219,6 +231,9 @@ export default function DashboardPage() {
           })
         }
 
+        setMonthlyData(monthlyStats)
+
+        // Data untuk grafik perbandingan
         setComparisonData(monthlyStats.map(item => ({
           name: item.month,
           permohonan: item.permohonan,
@@ -232,32 +247,55 @@ export default function DashboardPage() {
           ditebang: item.penebangan
         })))
 
+        // Utility function untuk validasi coordinate
+        const parseCoordinate = (coordStr: string): { lat: number; lng: number } | null => {
+          try {
+            const [lat, lng] = coordStr.split(',').map(coord => parseFloat(coord.trim()));
+            if (isNaN(lat) || isNaN(lng)) return null;
+            return { lat, lng };
+          } catch {
+            return null;
+          }
+        }
+
+        // Utility function untuk validasi type
+        const isValidType = (type: string): type is MapLocation['type'] => {
+          return ['permohonan', 'pemeliharaan', 'pemangkasan', 'penebangan'].includes(type);
+        }
+          
+        // Utility function untuk validasi status
+        const isValidStatus = (status: any): status is MapLocation['status'] => {
+          return ['pending', 'completed', 'in_progress'].includes(status);
+        }
+
         // Process map locations
         const locations = allData
           ?.filter(item => item.koordinat && typeof item.koordinat === 'string')
           .map(item => {
-            try {
-              const [lat, lng] = item.koordinat.split(',').map((coord: string) => parseFloat(coord.trim()))
-              if (isNaN(lat) || isNaN(lng)) return null
-              
-              return {
-                lat,
-                lng,
-                name: item.nama || 'Lokasi Tanpa Nama',
-                description: item.keterangan || 'Tidak ada keterangan',
-                type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-                status: item.status as 'pending' | 'completed' | 'in_progress',
-                date: item.created_at,
-                jumlah_pohon: item.jumlah_pohon || 0
-              }
-            } catch {
-              return null
+            const coord = parseCoordinate(item.koordinat);
+            if (!coord) return null;
+            
+            const type = item.type as string;
+            const status = item.status as string;
+            
+            if (!isValidType(type) || !isValidStatus(status)) {
+              return null;
             }
+            
+            return {
+              ...coord,
+              name: item.nama || 'Lokasi Tanpa Nama',
+              description: item.keterangan || 'Tidak ada keterangan',
+              type,
+              status,
+              date: item.created_at,
+              jumlah_pohon: item.jumlah_pohon || 0
+            } as MapLocation;
           })
           .filter((loc): loc is MapLocation => loc !== null)
-          .slice(0, 50) // Batasi 50 lokasi untuk performa
+          .slice(0, 50);
 
-        setMapLocations(locations || [])
+        setMapLocations(locations || []);
 
         // Process recent activities
         const activities = allData
@@ -268,7 +306,7 @@ export default function DashboardPage() {
             user_name: 'Pengguna',
             action: `${item.type === 'permohonan' ? 'Permohonan' : 
                      item.type === 'pemeliharaan' ? 'Pemeliharaan' : 
-                     item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama}`,
+                     item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama || ''}`,
             created_at: item.created_at,
             status: item.status as 'completed' | 'pending' | 'in_progress',
             type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
@@ -279,7 +317,7 @@ export default function DashboardPage() {
 
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error)
-        toast.error('Gagal memuat data dashboard: ' + error.message)
+        toast.error('Gagal memuat data dashboard: ' + (error?.message || 'Unknown error'))
       } finally {
         setLoading(false)
       }
@@ -290,7 +328,9 @@ export default function DashboardPage() {
     }
   }, [timeRange, user])
 
-  const fetchDashboardData = async () => {
+  const handleRefresh = async () => {
+    if (!user) return;
+    
     const supabase = createClient()
     try {
       setLoading(true)
@@ -414,32 +454,55 @@ export default function DashboardPage() {
         ditebang: item.penebangan
       })))
 
+      // Utility function untuk validasi coordinate
+      const parseCoordinate = (coordStr: string): { lat: number; lng: number } | null => {
+        try {
+          const [lat, lng] = coordStr.split(',').map(coord => parseFloat(coord.trim()));
+          if (isNaN(lat) || isNaN(lng)) return null;
+          return { lat, lng };
+        } catch {
+          return null;
+        }
+      }
+
+      // Utility function untuk validasi type
+      const isValidType = (type: string): type is MapLocation['type'] => {
+        return ['permohonan', 'pemeliharaan', 'pemangkasan', 'penebangan'].includes(type);
+      }
+        
+      // Utility function untuk validasi status
+      const isValidStatus = (status: any): status is MapLocation['status'] => {
+        return ['pending', 'completed', 'in_progress'].includes(status);
+      }
+
       // Process map locations
       const locations = allData
         ?.filter(item => item.koordinat && typeof item.koordinat === 'string')
         .map(item => {
-          try {
-            const [lat, lng] = item.koordinat.split(',').map(coord => parseFloat(coord.trim()))
-            if (isNaN(lat) || isNaN(lng)) return null
-            
-            return {
-              lat,
-              lng,
-              name: item.nama || 'Lokasi Tanpa Nama',
-              description: item.keterangan || 'Tidak ada keterangan',
-              type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-              status: item.status as 'pending' | 'completed' | 'in_progress',
-              date: item.created_at,
-              jumlah_pohon: item.jumlah_pohon || 0
-            }
-          } catch {
-            return null
+          const coord = parseCoordinate(item.koordinat);
+          if (!coord) return null;
+          
+          const type = item.type as string;
+          const status = item.status as string;
+          
+          if (!isValidType(type) || !isValidStatus(status)) {
+            return null;
           }
+          
+          return {
+            ...coord,
+            name: item.nama || 'Lokasi Tanpa Nama',
+            description: item.keterangan || 'Tidak ada keterangan',
+            type,
+            status,
+            date: item.created_at,
+            jumlah_pohon: item.jumlah_pohon || 0
+          } as MapLocation;
         })
         .filter((loc): loc is MapLocation => loc !== null)
-        .slice(0, 50) // Batasi 50 lokasi untuk performa
+        .slice(0, 50);
 
-      setMapLocations(locations || [])
+      setMapLocations(locations || []);
 
       // Process recent activities
       const activities = allData
@@ -450,7 +513,7 @@ export default function DashboardPage() {
           user_name: 'Pengguna',
           action: `${item.type === 'permohonan' ? 'Permohonan' : 
                    item.type === 'pemeliharaan' ? 'Pemeliharaan' : 
-                   item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama}`,
+                   item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama || ''}`,
           created_at: item.created_at,
           status: item.status as 'completed' | 'pending' | 'in_progress',
           type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
@@ -459,9 +522,10 @@ export default function DashboardPage() {
 
       setRecentActivities(activities)
 
+      toast.success('Data berhasil diperbarui')
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error)
-      toast.error('Gagal memuat data dashboard: ' + error.message)
+      console.error('Error refreshing dashboard data:', error)
+      toast.error('Gagal memperbarui data: ' + (error?.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }
@@ -529,6 +593,18 @@ export default function DashboardPage() {
     },
   ]
 
+  const getUserDisplayName = () => {
+    if (profile?.full_name) return profile.full_name;
+    if (user?.email) {
+      try {
+        return user.email.split('@')[0] || 'User';
+      } catch {
+        return 'User';
+      }
+    }
+    return 'User';
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 p-6">
@@ -580,7 +656,7 @@ export default function DashboardPage() {
             </div>
             
             <button 
-              onClick={fetchDashboardData}
+              onClick={handleRefresh}
               className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors shadow-lg shadow-emerald-600/20"
             >
               <RefreshCw className="h-4 w-4" />
@@ -595,7 +671,7 @@ export default function DashboardPage() {
             <p className="text-gray-300">
               Selamat datang kembali,{' '}
               <span className="font-semibold text-emerald-400">
-                {profile?.full_name || user.email?.split('@')[0]}
+                {getUserDisplayName()}
               </span>
               <span className="text-gray-500 ml-2">
                 • Total Data: {formatNumber(totalData)} records
@@ -653,12 +729,12 @@ export default function DashboardPage() {
                 <MapPin className="h-5 w-5 text-emerald-400" />
                 Peta Lokasi
               </h3>
-              <p className="text-sm text-gray-400 mt-1">{mapLocations.length} lokasi aktif</p>
+              <p className="text-sm text-gray-400 mt-1">{locations.length} lokasi aktif</p>
             </div>
           </div>
           <div className="h-[300px] rounded-xl overflow-hidden">
             <MapComponent 
-              locations={mapLocations}
+              locations={locations}
               height="100%"
               showControls={true}
               showLegend={true}
@@ -685,7 +761,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Grafik Perbandingan */}
-        <div className="lg:col-span-2 bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -708,7 +784,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Grafik Pohon */}
-        <div className="lg:col-span-2 bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">

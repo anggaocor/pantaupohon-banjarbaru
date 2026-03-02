@@ -10,9 +10,31 @@ interface DashboardStats {
   revenue: number
 }
 
+interface Activity {
+  id: string
+  user_name: string
+  action: string
+  created_at: string
+  [key: string]: unknown
+}
+
+interface ProfileRecord {
+  id: string
+  [key: string]: unknown
+}
+
+interface DataEntry {
+  [key: string]: unknown
+}
+
+interface Transaction {
+  amount: number
+  [key: string]: unknown
+}
+
 interface RealtimeDashboardData {
   stats: DashboardStats
-  activities: any[]
+  activities: Activity[]
   isLoading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -25,7 +47,7 @@ export function useRealtimeDashboard(): RealtimeDashboardData {
     averageRating: 0,
     revenue: 0,
   })
-  const [activities, setActivities] = useState<any[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -74,9 +96,9 @@ export function useRealtimeDashboard(): RealtimeDashboardData {
       setStats({ totalUsers, totalData, averageRating, revenue })
       setActivities(recentActivities || [])
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching dashboard data:', err)
-      setError(err.message || 'Gagal memuat data')
+      setError(err instanceof Error ? err.message : 'Gagal memuat data')
       toast.error('Gagal memuat data dashboard')
     } finally {
       setIsLoading(false)
@@ -99,7 +121,7 @@ export function useRealtimeDashboard(): RealtimeDashboardData {
             schema: 'public',
             table: 'profiles',
           },
-          (payload: RealtimePostgresChangesPayload<any>) => {
+          (payload: RealtimePostgresChangesPayload<ProfileRecord>) => {
             console.log('Profile change:', payload)
             
             if (payload.eventType === 'INSERT') {
@@ -128,7 +150,7 @@ export function useRealtimeDashboard(): RealtimeDashboardData {
             schema: 'public',
             table: 'data_entries',
           },
-          (payload: RealtimePostgresChangesPayload<any>) => {
+          (payload: RealtimePostgresChangesPayload<DataEntry>) => {
             console.log('Data entry change:', payload)
             
             if (payload.eventType === 'INSERT') {
@@ -157,10 +179,10 @@ export function useRealtimeDashboard(): RealtimeDashboardData {
             schema: 'public',
             table: 'activities',
           },
-          (payload: RealtimePostgresChangesPayload<any>) => {
+          (payload: RealtimePostgresChangesPayload<Activity>) => {
             console.log('New activity:', payload)
             
-            const newActivity = payload.new
+            const newActivity = payload.new as Activity
             setActivities(prev => [newActivity, ...prev.slice(0, 9)])
             
             // Show toast notification for important activities
@@ -184,10 +206,10 @@ export function useRealtimeDashboard(): RealtimeDashboardData {
             table: 'transactions',
             filter: 'status=eq.completed',
           },
-          (payload: RealtimePostgresChangesPayload<any>) => {
+          (payload: RealtimePostgresChangesPayload<Transaction>) => {
             console.log('New transaction:', payload)
             
-            const newTransaction = payload.new
+            const newTransaction = payload.new as Transaction
             setStats(prev => ({
               ...prev,
               revenue: prev.revenue + newTransaction.amount,

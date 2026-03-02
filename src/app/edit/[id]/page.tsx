@@ -5,11 +5,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { toast } from "sonner";
+import type { User } from "@supabase/supabase-js";
 import { Card } from "@/src/components/ui";
 import { 
   MapPin, 
-  Upload, 
-  User, 
+  User as UserIcon, 
   FileText, 
   Calendar, 
   Phone, 
@@ -55,7 +55,7 @@ export default function EditPage() {
   
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -293,10 +293,10 @@ export default function EditPage() {
       // Redirect ke halaman laporan
       router.push("/laporan");
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Update Error:", error);
       toast.error("Gagal memperbarui data", {
-        description: error.message || "Terjadi kesalahan yang tidak diketahui.",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui.",
       });
     } finally {
       setUploading(false);
@@ -317,7 +317,7 @@ export default function EditPage() {
 
       toast.success("Data berhasil dihapus");
       router.push("/laporan");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Delete Error:", error);
       toast.error("Gagal menghapus data");
     } finally {
@@ -397,15 +397,6 @@ export default function EditPage() {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "completed": return "✅ Selesai";
-      case "in_progress": return "🔄 Dalam Proses";
-      case "pending": return "⏳ Menunggu";
-      default: return status;
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-emerald-50">
@@ -454,7 +445,7 @@ export default function EditPage() {
           </div>
           <div className="mt-4 flex items-center justify-center gap-2 bg-white px-6 py-2 rounded-full shadow-sm">
             <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
-              <User className="h-4 w-4 text-white" />
+              <UserIcon className="h-4 w-4 text-white" />
             </div>
             <span className="text-sm text-gray-600">
               Login sebagai: <span className="font-medium text-emerald-700">{user?.email}</span>
@@ -514,7 +505,7 @@ export default function EditPage() {
               {/* Nama */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User className="inline h-4 w-4 mr-1 text-emerald-600" />
+                  <UserIcon className="inline h-4 w-4 mr-1 text-emerald-600" />
                   Nama Pemohon/Petugas <span className="text-red-500">*</span>
                 </label>
                 <input

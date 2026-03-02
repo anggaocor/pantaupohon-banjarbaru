@@ -266,7 +266,7 @@ export default function HomePage() {
                     <CheckCircle key={i} className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 fill-yellow-500" />
                   ))}
                 </div>
-                <p className="text-sm sm:text-base text-gray-300 mb-3 sm:mb-4 italic">"{testi.content}"</p>
+                <p className="text-sm sm:text-base text-gray-300 mb-3 sm:mb-4 italic">&ldquo;{testi.content}&rdquo;</p>
                 <div>
                   <p className="font-semibold text-white text-sm sm:text-base">{testi.name}</p>
                   <p className="text-xs sm:text-sm text-gray-500">{testi.role}</p>

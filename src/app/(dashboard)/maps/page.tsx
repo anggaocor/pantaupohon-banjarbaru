@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import MapComponent from '@/src/components/maps/MapComponent'
 import { createClient } from '@/src/lib/supabase/client'
 import { 
@@ -8,7 +8,6 @@ import {
   Filter, 
   Download, 
   Share2, 
-  Calendar, 
   MapPin,
   ChevronDown,
   X,
@@ -31,21 +30,48 @@ interface MapLocation {
   jumlah_pohon?: number
 }
 
+interface FilterState {
+  type: 'all' | 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan'
+  dateRange: 'all' | 'week' | 'month' | 'year'
+  status: 'all' | 'pending' | 'completed' | 'in_progress'
+}
+
 export default function MapsPage() {
   const [locations, setLocations] = useState<MapLocation[]>([])
   const [filteredLocations, setFilteredLocations] = useState<MapLocation[]>([])
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(true)
   
-  const [filter, setFilter] = useState({
-    type: 'all' as 'all' | 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-    dateRange: 'all' as 'all' | 'week' | 'month' | 'year',
-    status: 'all' as 'all' | 'pending' | 'completed' | 'in_progress'
+  const [filter, setFilter] = useState<FilterState>({
+    type: 'all',
+    dateRange: 'all',
+    status: 'all'
   })
 
   const supabase = createClient()
 
-  const fetchLocations = async () => {
+  // Utility function untuk parse coordinate
+  const parseCoordinate = useCallback((coordStr: string): { lat: number; lng: number } | null => {
+    try {
+      const [lat, lng] = coordStr.split(',').map(coord => parseFloat(coord.trim()))
+      if (isNaN(lat) || isNaN(lng)) return null
+      return { lat, lng }
+    } catch {
+      return null
+    }
+  }, [])
+
+  // Utility function untuk validasi type
+  const isValidType = useCallback((type: string): type is MapLocation['type'] => {
+    return ['permohonan', 'pemeliharaan', 'pemangkasan', 'penebangan'].includes(type)
+  }, [])
+
+  // Utility function untuk validasi status
+  const isValidStatus = useCallback((status: any): status is MapLocation['status'] => {
+    return ['pending', 'completed', 'in_progress'].includes(status)
+  }, [])
+
+  const fetchLocations = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -60,28 +86,29 @@ export default function MapsPage() {
         const formattedLocations = data
           .filter(loc => loc.koordinat && typeof loc.koordinat === 'string')
           .map(loc => {
-            try {
-              const [lat, lng] = loc.koordinat.split(',').map(coord => parseFloat(coord.trim()))
-              if (isNaN(lat) || isNaN(lng)) return null
-              
-              return {
-                lat,
-                lng,
-                name: loc.nama || 'Lokasi Tanpa Nama',
-                description: loc.keterangan || 'Tidak ada keterangan',
-                type: (loc.type || 'permohonan') as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-                status: (loc.status || 'pending') as 'pending' | 'completed' | 'in_progress',
-                date: loc.created_at,
-                jumlah_pohon: loc.pemangkasan || loc.penebangan || loc.jumlah_pohon || 0
-              }
-            } catch {
+            const coord = parseCoordinate(loc.koordinat)
+            if (!coord) return null
+            
+            const type = loc.type || 'permohonan'
+            const status = loc.status || 'pending'
+            
+            if (!isValidType(type) || !isValidStatus(status)) {
               return null
             }
+            
+            return {
+              ...coord,
+              name: loc.nama || 'Lokasi Tanpa Nama',
+              description: loc.keterangan || 'Tidak ada keterangan',
+              type,
+              status,
+              date: loc.created_at,
+              jumlah_pohon: loc.pemangkasan || loc.penebangan || loc.jumlah_pohon || 0
+            } as MapLocation
           })
           .filter((loc): loc is MapLocation => loc !== null)
 
         setLocations(formattedLocations)
-        applyFilters(formattedLocations, filter)
       } else {
         setLocations([])
         setFilteredLocations([])
@@ -92,9 +119,9 @@ export default function MapsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, parseCoordinate, isValidType, isValidStatus])
 
-  const applyFilters = (locations: MapLocation[], filter: any) => {
+  const applyFilters = useCallback((locations: MapLocation[], filter: FilterState) => {
     let filtered = [...locations]
 
     if (filter.type !== 'all') {
@@ -129,17 +156,17 @@ export default function MapsPage() {
     }
 
     setFilteredLocations(filtered)
-  }
-
-  useEffect(() => {
-    fetchLocations()
   }, [])
 
   useEffect(() => {
-    applyFilters(locations, filter)
-  }, [filter, locations])
+    fetchLocations()
+  }, [fetchLocations])
 
-  const handleExport = () => {
+  useEffect(() => {
+    applyFilters(locations, filter)
+  }, [locations, filter, applyFilters])
+
+  const handleExport = useCallback(() => {
     if (filteredLocations.length === 0) {
       toast.error('Tidak ada data untuk diexport')
       return
@@ -170,9 +197,9 @@ export default function MapsPage() {
     URL.revokeObjectURL(url)
     
     toast.success(`${filteredLocations.length} data berhasil di-export ke CSV`)
-  }
+  }, [filteredLocations])
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     const text = `Peta Kegiatan Pohon - ${filteredLocations.length} lokasi ditemukan`
     
     if (navigator.share) {
@@ -187,9 +214,13 @@ export default function MapsPage() {
       navigator.clipboard.writeText(window.location.href)
       toast.success('Link berhasil disalin ke clipboard')
     }
-  }
+  }, [filteredLocations.length])
 
-  const getTypeText = (type: string) => {
+  const handleResetFilter = useCallback(() => {
+    setFilter({ type: 'all', dateRange: 'all', status: 'all' })
+  }, [])
+
+  const getTypeText = useCallback((type: string) => {
     switch (type) {
       case 'permohonan': return 'Permohonan'
       case 'pemeliharaan': return 'Pemeliharaan'
@@ -197,18 +228,18 @@ export default function MapsPage() {
       case 'penebangan': return 'Penebangan'
       default: return type
     }
-  }
+  }, [])
 
-  const getStatusText = (status: string) => {
+  const getStatusText = useCallback((status: string) => {
     switch (status) {
       case 'completed': return 'Selesai'
       case 'pending': return 'Menunggu'
       case 'in_progress': return 'Dalam Proses'
       default: return status
     }
-  }
+  }, [])
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = useCallback((type: string) => {
     switch (type) {
       case 'permohonan': return 'bg-blue-500'
       case 'pemeliharaan': return 'bg-green-500'
@@ -216,25 +247,29 @@ export default function MapsPage() {
       case 'penebangan': return 'bg-red-500'
       default: return 'bg-gray-500'
     }
-  }
+  }, [])
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-500'
       case 'pending': return 'bg-yellow-500'
       case 'in_progress': return 'bg-blue-500'
       default: return 'bg-gray-500'
     }
-  }
+  }, [])
 
-  const getTypeStats = () => {
+  const stats = useMemo(() => {
     return {
       permohonan: locations.filter(l => l.type === 'permohonan').length,
       pemeliharaan: locations.filter(l => l.type === 'pemeliharaan').length,
       pemangkasan: locations.filter(l => l.type === 'pemangkasan').length,
       penebangan: locations.filter(l => l.type === 'penebangan').length,
     }
-  }
+  }, [locations])
+
+  const handleFilterChange = useCallback((key: keyof FilterState, value: string) => {
+    setFilter(prev => ({ ...prev, [key]: value }))
+  }, [])
 
   if (loading) {
     return (
@@ -246,8 +281,6 @@ export default function MapsPage() {
       </div>
     )
   }
-
-  const stats = getTypeStats()
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-6">
@@ -304,7 +337,7 @@ export default function MapsPage() {
               </label>
               <select
                 value={filter.type}
-                onChange={(e) => setFilter({...filter, type: e.target.value as any})}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
                 className="w-full bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="all">Semua Kegiatan</option>
@@ -321,7 +354,7 @@ export default function MapsPage() {
               </label>
               <select
                 value={filter.dateRange}
-                onChange={(e) => setFilter({...filter, dateRange: e.target.value as any})}
+                onChange={(e) => handleFilterChange('dateRange', e.target.value)}
                 className="w-full bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="all">Semua Waktu</option>
@@ -337,7 +370,7 @@ export default function MapsPage() {
               </label>
               <select
                 value={filter.status}
-                onChange={(e) => setFilter({...filter, status: e.target.value as any})}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="all">Semua Status</option>
@@ -357,7 +390,7 @@ export default function MapsPage() {
               </button>
               
               <button
-                onClick={() => setFilter({ type: 'all', dateRange: 'all', status: 'all' })}
+                onClick={handleResetFilter}
                 className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
                 title="Reset Filter"
               >
@@ -461,7 +494,7 @@ export default function MapsPage() {
           <MapPin className="h-12 w-12 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-400">Tidak ada lokasi ditemukan</p>
           <button
-            onClick={() => setFilter({ type: 'all', dateRange: 'all', status: 'all' })}
+            onClick={handleResetFilter}
             className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 text-sm transition-colors"
           >
             Reset Filter

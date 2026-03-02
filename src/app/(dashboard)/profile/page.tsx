@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { toast } from "sonner";
@@ -41,10 +41,10 @@ interface UserProfile {
   id: string;
   email: string;
   full_name: string;
-  phone_number: string;
-  address: string;
+  phone_number: string | null;
+  address: string | null;
   role: 'admin' | 'petugas' | 'user';
-  avatar_url: string;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,9 +57,43 @@ interface SessionData {
   is_current: boolean;
 }
 
+interface UserMetadata {
+  full_name?: string;
+}
+
+interface User {
+  id: string;
+  email?: string;
+  user_metadata?: UserMetadata;
+}
+
+interface FormData {
+  full_name: string;
+  phone_number: string;
+  address: string;
+}
+
+interface PasswordData {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+interface ShowPassword {
+  current: boolean;
+  new: boolean;
+  confirm: boolean;
+}
+
+interface RoleBadge {
+  text: string;
+  className: string;
+  icon: React.ReactNode;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,19 +105,19 @@ export default function ProfilePage() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     full_name: "",
     phone_number: "",
     address: ""
   });
 
-  const [passwordData, setPasswordData] = useState({
+  const [passwordData, setPasswordData] = useState<PasswordData>({
     current_password: "",
     new_password: "",
     confirm_password: ""
   });
 
-  const [showPassword, setShowPassword] = useState({
+  const [showPassword, setShowPassword] = useState<ShowPassword>({
     current: false,
     new: false,
     confirm: false
@@ -112,7 +146,7 @@ export default function ProfilePage() {
     checkSession();
   }, [router]);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const supabase = createClient();
       
@@ -158,9 +192,9 @@ export default function ProfilePage() {
       console.error("Error fetching profile:", error);
       toast.error("Gagal memuat data profil");
     }
-  };
+  }, [user]);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     setLoadingSessions(true);
     try {
       const supabase = createClient();
@@ -186,9 +220,9 @@ export default function ProfilePage() {
     } finally {
       setLoadingSessions(false);
     }
-  };
+  }, []);
 
-  const validateForm = () => {
+  const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.full_name.trim()) {
@@ -201,9 +235,9 @@ export default function ProfilePage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const validatePassword = () => {
+  const validatePassword = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!passwordData.current_password) {
@@ -226,9 +260,9 @@ export default function ProfilePage() {
 
     setPasswordErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [passwordData]);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -252,9 +286,9 @@ export default function ProfilePage() {
       setAvatarPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const uploadAvatar = async () => {
+  const uploadAvatar = useCallback(async () => {
     if (!avatarFile || !user) return;
 
     try {
@@ -307,13 +341,15 @@ export default function ProfilePage() {
     } finally {
       setUploadingAvatar(false);
     }
-  };
+  }, [avatarFile, user, profile?.avatar_url, fetchProfile]);
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = useCallback(async () => {
     if (!validateForm()) {
       toast.error("Harap perbaiki kesalahan pada form");
       return;
     }
+
+    if (!user) return;
 
     setSaving(true);
 
@@ -341,13 +377,15 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [formData, user, validateForm, fetchProfile]);
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = useCallback(async () => {
     if (!validatePassword()) {
       toast.error("Harap periksa kembali password Anda");
       return;
     }
+
+    if (!user?.email) return;
 
     setSaving(true);
 
@@ -385,9 +423,9 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [passwordData, user, validatePassword]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signOut();
@@ -402,19 +440,42 @@ export default function ProfilePage() {
       console.error("Error logging out:", error);
       toast.error("Gagal logout");
     }
-  };
+  }, [router]);
 
-  const handleLogoutAllDevices = async () => {
+  const handleLogoutAllDevices = useCallback(async () => {
     try {
       toast.info("Fitur akan segera tersedia");
     } catch (error) {
       console.error("Error logging out all devices:", error);
       toast.error("Gagal logout dari semua perangkat");
     }
-  };
+  }, []);
 
-  const getRoleBadge = (role: string) => {
-    const badges: Record<string, { text: string; className: string; icon: JSX.Element }> = {
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setAvatarFile(null);
+    setAvatarPreview("");
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || "",
+        phone_number: profile.phone_number || "",
+        address: profile.address || ""
+      });
+    }
+  }, [profile]);
+
+  const handleCancelPassword = useCallback(() => {
+    setShowChangePassword(false);
+    setPasswordData({
+      current_password: "",
+      new_password: "",
+      confirm_password: ""
+    });
+    setPasswordErrors({});
+  }, []);
+
+  const getRoleBadge = useCallback((role: string): RoleBadge => {
+    const badges: Record<string, RoleBadge> = {
       admin: { 
         text: 'Administrator', 
         className: 'bg-red-500/20 text-red-400 border-red-500/30',
@@ -437,7 +498,7 @@ export default function ProfilePage() {
       className: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
       icon: <User className="h-3 w-3 mr-1" />
     };
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -466,6 +527,8 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const roleBadge = getRoleBadge(profile.role);
 
   return (
     <div className="min-h-screen bg-gray-900 py-8 px-4">
@@ -521,9 +584,9 @@ export default function ProfilePage() {
                   {profile.email}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2 justify-center md:justify-start">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getRoleBadge(profile.role).className}`}>
-                    {getRoleBadge(profile.role).icon}
-                    {getRoleBadge(profile.role).text}
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${roleBadge.className}`}>
+                    {roleBadge.icon}
+                    {roleBadge.text}
                   </span>
                   <span className="inline-flex items-center px-3 py-1 bg-gray-700/50 text-gray-300 rounded-full text-sm border border-gray-600">
                     <Calendar className="h-3 w-3 mr-1 text-emerald-400" />
@@ -774,9 +837,9 @@ export default function ProfilePage() {
                       Role / Peran
                     </label>
                     <div className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-                      <span className={`px-3 py-1 rounded-full text-sm ${getRoleBadge(profile.role).className}`}>
-                        {getRoleBadge(profile.role).icon}
-                        {getRoleBadge(profile.role).text}
+                      <span className={`px-3 py-1 rounded-full text-sm ${roleBadge.className}`}>
+                        {roleBadge.icon}
+                        {roleBadge.text}
                       </span>
                       <p className="text-sm text-gray-500">
                         Role menentukan akses Anda dalam sistem
@@ -806,16 +869,7 @@ export default function ProfilePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setIsEditing(false);
-                          setAvatarFile(null);
-                          setAvatarPreview("");
-                          setFormData({
-                            full_name: profile.full_name || "",
-                            phone_number: profile.phone_number || "",
-                            address: profile.address || ""
-                          });
-                        }}
+                        onClick={handleCancelEdit}
                         className="px-6 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700 font-medium transition-colors"
                       >
                         Batal
@@ -858,9 +912,9 @@ export default function ProfilePage() {
                       <p className="text-sm font-medium text-gray-500">Role</p>
                       <div className="flex items-center gap-2">
                         <Shield className="h-4 w-4 text-emerald-400" />
-                        <span className={`px-3 py-1 rounded-full text-sm ${getRoleBadge(profile.role).className}`}>
-                          {getRoleBadge(profile.role).icon}
-                          {getRoleBadge(profile.role).text}
+                        <span className={`px-3 py-1 rounded-full text-sm ${roleBadge.className}`}>
+                          {roleBadge.icon}
+                          {roleBadge.text}
                         </span>
                       </div>
                     </div>
@@ -912,15 +966,7 @@ export default function ProfilePage() {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-white">Ubah Password</h3>
                     <button
-                      onClick={() => {
-                        setShowChangePassword(false);
-                        setPasswordData({
-                          current_password: "",
-                          new_password: "",
-                          confirm_password: ""
-                        });
-                        setPasswordErrors({});
-                      }}
+                      onClick={handleCancelPassword}
                       className="text-gray-400 hover:text-gray-300"
                     >
                       <X className="h-5 w-5" />
@@ -1061,15 +1107,7 @@ export default function ProfilePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setShowChangePassword(false);
-                          setPasswordData({
-                            current_password: "",
-                            new_password: "",
-                            confirm_password: ""
-                          });
-                          setPasswordErrors({});
-                        }}
+                        onClick={handleCancelPassword}
                         className="px-6 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700 font-medium transition-colors"
                       >
                         Batal

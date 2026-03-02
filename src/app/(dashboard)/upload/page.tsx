@@ -1,39 +1,27 @@
 // app/upload/page.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { toast } from "sonner";
+import type { User } from "@supabase/supabase-js";
 import { Card } from "@/src/components/ui";
 import {
   Upload,
   FileSpreadsheet,
   Download,
   AlertCircle,
-  CheckCircle,
   XCircle,
   Loader2,
   ArrowLeft,
-  Trash2,
   FileText,
   Database,
-  RefreshCw,
   Eye,
   ChevronDown,
   ChevronUp,
-  Filter,
   Search,
-  Calendar,
-  User,
-  MapPin,
-  TreePine,
-  Scissors,
-  Axe,
-  FileJson,
-  FileCog,
   Shield,
-  HardDrive,
   Clock,
   Info
 } from "lucide-react";
@@ -60,14 +48,13 @@ interface UploadHistory {
 
 interface PreviewData {
   headers: string[];
-  rows: any[][];
+  rows: (string | number | null)[][];
   totalRows: number;
 }
 
 export default function UploadPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -79,7 +66,7 @@ export default function UploadPage() {
   const [selectedHistory, setSelectedHistory] = useState<UploadHistory | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [mapping, setMapping] = useState({
+  const mapping = {
     nama: 'nama',
     perihal: 'perihal',
     nomor_surat: 'nomor_surat',
@@ -93,7 +80,7 @@ export default function UploadPage() {
     jumlah_pohon: 'jumlah_pohon',
     pemangkasan: 'pemangkasan',
     penebangan: 'penebangan'
-  });
+  };
 
   const supabase = createClient();
 
@@ -115,8 +102,6 @@ export default function UploadPage() {
         .select("*")
         .eq("id", session.user.id)
         .single();
-      
-      setProfile(profileData);
       
       // Cek apakah user adalah admin
       if (profileData?.role !== 'admin') {
@@ -185,7 +170,7 @@ export default function UploadPage() {
           skipEmptyLines: true,
           complete: (results) => {
             const headers = results.meta.fields || [];
-            const rows = results.data.slice(0, 5).map((row: any) => 
+            const rows = (results.data as Record<string, string | number | null>[]).slice(0, 5).map((row) => 
               headers.map(h => row[h] || '')
             );
             
@@ -197,7 +182,7 @@ export default function UploadPage() {
             setShowPreview(true);
             setProcessing(false);
           },
-          error: (error) => {
+          error: (error: any) => {
             console.error("Error parsing CSV:", error);
             toast.error("Gagal membaca file CSV");
             setProcessing(false);
@@ -281,7 +266,7 @@ export default function UploadPage() {
           jumlah_pohon: parseInt(row[mapping.jumlah_pohon]) || 0,
           pemangkasan: parseInt(row[mapping.pemangkasan]) || 0,
           penebangan: parseInt(row[mapping.penebangan]) || 0,
-          user_id: user.id,
+          user_id: user,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -335,7 +320,7 @@ export default function UploadPage() {
           success_count: 0,
           failed_count: errors.length,
           status: 'failed',
-          uploaded_by: user.id,
+          uploaded_by: user,
           errors: errors.slice(0, 10) // Simpan 10 error pertama
         });
         
@@ -358,7 +343,7 @@ export default function UploadPage() {
         success_count: validData.length,
         failed_count: 0,
         status: 'success',
-        uploaded_by: user.id
+        uploaded_by: user
       });
 
       toast.success(`${validData.length} data berhasil diupload!`);
@@ -383,7 +368,7 @@ export default function UploadPage() {
         success_count: 0,
         failed_count: 1,
         status: 'failed',
-        uploaded_by: user.id,
+        uploaded_by: user,
         errors: [error.message]
       });
     } finally {
