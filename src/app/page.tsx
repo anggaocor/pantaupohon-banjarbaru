@@ -36,8 +36,8 @@ export default function HomePage() {
           }}
         />
         {/* Gradient Overlay Multi-layer untuk efek lebih dalam */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/85 to-gray-900/95" />
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-b from-gray-900/95 via-gray-900/85 to-gray-900/95" />
+        <div className="absolute inset-0 bg-linear-to-rrom-emerald-900/30 to-transparent" />
         <div className="absolute inset-0 backdrop-blur-[2px]" />
       </div>
       
@@ -46,7 +46,7 @@ export default function HomePage() {
         {/* Navbar Sederhana */}
         <nav className="flex justify-between items-center mb-12 sm:mb-16 lg:mb-20">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-linear-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <TreePine className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
             </div>
             <span className="text-lg sm:text-xl font-bold text-white">SIPANTARU</span>
@@ -60,7 +60,7 @@ export default function HomePage() {
               </Button>
             </Link>
             <Link href="/register">
-              <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500">
+              <Button className="bg-linear-to-rrom-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500">
                 Daftar
               </Button>
             </Link>
@@ -81,7 +81,7 @@ export default function HomePage() {
           
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 leading-tight">
             Selamat Datang di{' '}
-            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent block sm:inline">
+            <span className="bg-linear-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent block sm:inline">
               SIPANTARU
             </span>
           </h1>
@@ -93,7 +93,7 @@ export default function HomePage() {
           
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
             <Link href="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">
+              <Button size="lg" className="w-full sm:w-auto bg-linear-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">
                 Mulai Sekarang
                 <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
@@ -188,7 +188,7 @@ export default function HomePage() {
               return (
                 <div 
                   key={index} 
-                  className={`group bg-gradient-to-br ${colors[fitur.color as keyof typeof colors]} backdrop-blur-sm border rounded-xl sm:rounded-2xl p-5 sm:p-6 hover:scale-[1.02] sm:hover:scale-105 transition-all duration-300 cursor-pointer`}
+                  className={`group bg-linear-to-br ${colors[fitur.color as keyof typeof colors]} backdrop-blur-sm border rounded-xl sm:rounded-2xl p-5 sm:p-6 hover:scale-[1.02] sm:hover:scale-105 transition-all duration-300 cursor-pointer`}
                 >
                   <div className="mb-3 sm:mb-4">
                     <Icon className="h-6 w-6 sm:h-8 sm:w-8" />
@@ -206,7 +206,7 @@ export default function HomePage() {
         </div>
 
         {/* CTA Section */}
-        <div className="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-xl sm:rounded-2xl lg:rounded-3xl p-6 sm:p-8 lg:p-12 mb-16 sm:mb-20 lg:mb-24 mx-2 sm:mx-0">
+        <div className="bg-linear-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-xl sm:rounded-2xl lg:rounded-3xl p-6 sm:p-8 lg:p-12 mb-16 sm:mb-20 lg:mb-24 mx-2 sm:mx-0">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8">
             <div className="text-center lg:text-left">
               <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
@@ -281,7 +281,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-linear-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
                   <TreePine className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <span className="text-base sm:text-lg font-bold text-white">SIPANTARU</span>
@@ -321,7 +321,7 @@ export default function HomePage() {
           
           <div className="border-t border-gray-800 py-4 sm:py-6 text-center">
             <p className="text-xs sm:text-sm text-gray-500 px-2">
-              © {new Date().getFullYear()} PT. Berkah Adha Kreasindo. All rights reserved. 
+              © 2024 PT. Berkah Adha Kreasindo. All rights reserved. 
               <span className="mx-1 sm:mx-2 text-gray-700">|</span>
               <span className="text-emerald-400">v. 2.0.0</span>
               <span className="mx-1 sm:mx-2 text-gray-700">|</span>
