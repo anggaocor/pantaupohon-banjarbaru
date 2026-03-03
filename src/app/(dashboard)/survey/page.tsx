@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from 'react'
+import SurveyContent from '@/src/components/forms/SurveyContent'
 import { createClient } from "@/src/lib/supabase/client";
 import { toast } from "sonner";
 import { Card } from "@/src/components/ui";
