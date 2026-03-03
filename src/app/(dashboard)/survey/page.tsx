@@ -1,12 +1,13 @@
 // app/survey/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from 'react'
-import SurveyContent from '@/src/components/forms/SurveyContent'
-import { createClient } from "@/src/lib/supabase/client";
+import Link from "next/link";
+import moment from "moment";
+import "moment/locale/id";
 import { toast } from "sonner";
+import { createClient } from "@/src/lib/supabase/client";
 import { Card } from "@/src/components/ui";
 import {
   Camera,
@@ -39,9 +40,6 @@ import {
   Loader2,
   Info
 } from "lucide-react";
-import Link from "next/link";
-import moment from "moment";
-import "moment/locale/id";
 
 moment.locale('id');
 
@@ -90,7 +88,8 @@ interface SurveyPhoto {
   created_at: string;
 }
 
-export default function SurveyPage() {
+// Komponen utama yang menggunakan useSearchParams
+function SurveyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const permohonanId = searchParams.get('permohonan');
@@ -122,18 +121,24 @@ export default function SurveyPage() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const supabase = createClient();
-      const { data: { session }, error } = await supabase.auth.getSession();
+      try {
+        const supabase = createClient();
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (error || !session) {
-        toast.error("Anda harus login terlebih dahulu");
-        router.push("/login");
-        return;
+        if (error || !session) {
+          toast.error("Anda harus login terlebih dahulu");
+          router.push("/login");
+          return;
+        }
+
+        setUser(session.user);
+        await fetchPermohonanList();
+      } catch (error) {
+        console.error("Error checking session:", error);
+        toast.error("Terjadi kesalahan saat memeriksa session");
+      } finally {
+        setLoading(false);
       }
-
-      setUser(session.user);
-      await fetchPermohonanList();
-      setLoading(false);
     };
 
     checkSession();
@@ -636,7 +641,7 @@ Dilaporkan oleh: ${user?.email}
             <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
               <ClipboardList className="h-4 w-4 text-emerald-600" />
               <span className="text-sm text-gray-600">
-                ID: <span className="font-mono text-xs">{selectedPermohonan.id}</span>
+                ID: <span className="font-mono text-xs">{selectedPermohonan?.id}</span>
               </span>
             </div>
           )}
@@ -799,31 +804,31 @@ Dilaporkan oleh: ${user?.email}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-emerald-600">Nama Pemohon</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan.nama}</p>
+                          <p className="font-medium text-gray-900">{selectedPermohonan?.nama}</p>
                         </div>
                         <div>
                           <p className="text-emerald-600">Perihal</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan.perihal}</p>
+                          <p className="font-medium text-gray-900">{selectedPermohonan?.perihal}</p>
                         </div>
                         <div>
                           <p className="text-emerald-600">Nomor Surat</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan.nomor_surat}</p>
+                          <p className="font-medium text-gray-900">{selectedPermohonan?.nomor_surat}</p>
                         </div>
                         <div>
                           <p className="text-emerald-600">Tanggal Surat</p>
-                          <p className="font-medium text-gray-900">{formatDate(selectedPermohonan.tanggal_surat)}</p>
+                          <p className="font-medium text-gray-900">{formatDate(selectedPermohonan?.tanggal_surat || '-')}</p>
                         </div>
                         <div className="md:col-span-2">
                           <p className="text-emerald-600">Alamat</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan.alamat}</p>
+                          <p className="font-medium text-gray-900">{selectedPermohonan?.alamat}</p>
                         </div>
                         <div>
                           <p className="text-emerald-600">Kontak</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan.kontak || '-'}</p>
+                          <p className="font-medium text-gray-900">{selectedPermohonan?.kontak || '-'}</p>
                         </div>
                         <div>
                           <p className="text-emerald-600">Koordinat</p>
-                          <p className="font-mono text-sm text-gray-900">{selectedPermohonan.koordinat}</p>
+                          <p className="font-mono text-sm text-gray-900">{selectedPermohonan?.koordinat}</p>
                         </div>
                       </div>
 
@@ -838,7 +843,7 @@ Dilaporkan oleh: ${user?.email}
                               Jumlah Pohon dalam Permohonan
                             </p>
                             <p className="text-3xl font-bold text-emerald-700">
-                              {selectedPermohonan.jumlah_pohon || 0}
+                              {selectedPermohonan?.jumlah_pohon || 0}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
                               * Gunakan sebagai referensi untuk rekomendasi dan catatan survey
@@ -850,7 +855,7 @@ Dilaporkan oleh: ${user?.email}
 
                     <div className="flex gap-2 ml-4">
                       <Link
-                        href={`/edit/${selectedPermohonan.id}`}
+                        href={`/edit/${selectedPermohonan?.id}`}
                         className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
                         title="Edit Data Permohonan"
                       >
@@ -889,7 +894,7 @@ Dilaporkan oleh: ${user?.email}
                             Referensi Permohonan
                           </p>
                           <p className="text-sm text-blue-700">
-                            Jumlah pohon yang diajukan: <span className="font-bold">{selectedPermohonan.jumlah_pohon || 0} pohon</span>
+                            Jumlah pohon yang diajukan: <span className="font-bold">{selectedPermohonan?.jumlah_pohon || 0} pohon</span>
                           </p>
                           <p className="text-xs text-blue-600 mt-1">
                             Data ini dapat digunakan sebagai pertimbangan dalam memberikan rekomendasi dan catatan survey.
@@ -967,7 +972,7 @@ Dilaporkan oleh: ${user?.email}
                     </div>
 
                     {/* Tree Measurements */}
-                    <div className="p-6 bg-gray-700 rounded-xl">
+                    <div className="p-6 bg-gray-50 rounded-xl">
                       <h3 className="font-semibold text-emerald-800 mb-4 flex items-center">
                         <Ruler className="h-5 w-5 mr-2" />
                         Pengukuran Pohon
@@ -1060,7 +1065,7 @@ Dilaporkan oleh: ${user?.email}
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Rekomendasi
                           <span className="ml-2 text-xs text-emerald-600">
-                            (berdasarkan {selectedPermohonan.jumlah_pohon || 0} pohon)
+                            (berdasarkan {selectedPermohonan?.jumlah_pohon || 0} pohon)
                           </span>
                         </label>
                         <textarea
@@ -1068,7 +1073,7 @@ Dilaporkan oleh: ${user?.email}
                           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
                           value={formData.recommendations}
                           onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
-                          placeholder={`Rekomendasi untuk ${selectedPermohonan.jumlah_pohon || 0} pohon...`}
+                          placeholder={`Rekomendasi untuk ${selectedPermohonan?.jumlah_pohon || 0} pohon...`}
                         />
                       </div>
 
@@ -1084,7 +1089,7 @@ Dilaporkan oleh: ${user?.email}
                           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
                           value={formData.notes}
                           onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                          placeholder={`Catatan survey untuk ${selectedPermohonan.jumlah_pohon || 0} pohon...`}
+                          placeholder={`Catatan survey untuk ${selectedPermohonan?.jumlah_pohon || 0} pohon...`}
                         />
                       </div>
                     </div>
@@ -1232,5 +1237,21 @@ Dilaporkan oleh: ${user?.email}
         </div>
       </div>
     </div>
+  );
+}
+
+// Komponen utama dengan Suspense
+export default function SurveyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-emerald-50 to-teal-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-3"></div>
+          <p className="text-gray-600">Memuat halaman survey...</p>
+        </div>
+      </div>
+    }>
+      <SurveyPageContent />
+    </Suspense>
   );
 }
