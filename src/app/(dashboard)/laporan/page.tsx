@@ -505,7 +505,7 @@ export default function LaporanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-green-50 to-emerald-50 py-8 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

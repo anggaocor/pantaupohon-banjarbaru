@@ -618,7 +618,7 @@ Dilaporkan oleh: ${user?.email}
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-emerald-50 to-teal-50 py-8 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Navigation */}
         <div className="mb-6 flex items-center justify-between">
