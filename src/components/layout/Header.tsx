@@ -102,7 +102,7 @@ export default function Header({ toggleSidebar, isSidebarOpen, children }: Heade
 
             {/* Institution Title */}
             <div className="flex items-center gap-3">
-              <div className="hidden md:block w-1 h-8 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+              <div className="hidden md:block w-1 h-8 bg-linear-to-b from-emerald-500 to-teal-500 rounded-full"></div>
               <div>
                 <h1 className="text-lg font-semibold text-white">
                   Dinas Lingkungan Hidup
@@ -147,7 +147,7 @@ export default function Header({ toggleSidebar, isSidebarOpen, children }: Heade
                 className="flex items-center gap-2 sm:gap-3 p-1.5 rounded-lg hover:bg-gray-800 transition-colors group"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                     <span className="text-white text-sm font-medium">
                       {getInitials()}
                     </span>
@@ -156,7 +156,7 @@ export default function Header({ toggleSidebar, isSidebarOpen, children }: Heade
                     <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">
                       {profile?.full_name || user?.email?.split('@')[0]}
                     </p>
-                    <p className="text-xs text-gray-400 max-w-[150px] truncate">
+                    <p className="text-xs text-gray-400 max-w-37.5 truncate">
                       {user?.email}
                     </p>
                   </div>
@@ -176,7 +176,7 @@ export default function Header({ toggleSidebar, isSidebarOpen, children }: Heade
                   {/* Dropdown Menu */}
                   <div className="absolute right-0 mt-2 w-64 z-50 rounded-xl bg-gray-800 border border-gray-700 shadow-2xl overflow-hidden">
                     {/* User Info */}
-                    <div className="p-4 bg-gradient-to-r from-gray-800 to-gray-750 border-b border-gray-700">
+                    <div className="p-4 bg-linear-to-r from-gray-800 to-gray-750 border-b border-gray-700">
                       <p className="text-sm font-medium text-white">
                         {profile?.full_name || user?.email?.split('@')[0]}
                       </p>

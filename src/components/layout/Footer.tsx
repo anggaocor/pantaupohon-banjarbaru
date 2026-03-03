@@ -21,7 +21,7 @@ const Footer = () => {
           {/* Copyright */}
           <div className="text-center">
             <p className="text-sm text-gray-400">
-              © {currentYear} All rights reserved
+              © 2024 All rights reserved
             </p>
             <p className="text-xs text-gray-600 mt-1 flex items-center justify-center gap-1">
               Made with <Heart className="h-3 w-3 text-red-500 fill-red-500" /> in Banjarbaru

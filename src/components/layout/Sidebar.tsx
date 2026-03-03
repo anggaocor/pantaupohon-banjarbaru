@@ -82,7 +82,7 @@ export default function Sidebar() {
         transition-all duration-300 ease-in-out
         ${collapsed ? 'lg:w-20' : 'lg:w-72'}
       `}>
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gradient-to-b from-gray-900 to-gray-800 px-4 border-r border-gray-700 shadow-2xl">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-linear-to-b from-gray-900 to-gray-800 px-4 border-r border-gray-700 shadow-2xl">
           
           {/* Logo Area */}
           <div className="flex h-20 shrink-0 items-center justify-between px-2 border-b border-gray-700">
@@ -119,7 +119,7 @@ export default function Sidebar() {
           {!collapsed && user && (
             <div className="px-3 py-4 bg-gray-800/50 rounded-xl border border-gray-700">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                   <User className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -136,7 +136,7 @@ export default function Sidebar() {
 
           {collapsed && user && (
             <div className="py-4 flex justify-center">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                 <User className="h-5 w-5 text-white" />
               </div>
             </div>
@@ -221,7 +221,7 @@ export default function Sidebar() {
           />
 
           {/* Sidebar */}
-          <div className="relative flex w-72 flex-col bg-gradient-to-b from-gray-900 to-gray-800">
+          <div className="relative flex w-72 flex-col bg-linear-to-b from-gray-900 to-gray-800">
             <div className="flex h-20 items-center justify-between px-4 border-b border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-600 rounded-lg">
@@ -244,7 +244,7 @@ export default function Sidebar() {
             {user && (
               <div className="px-4 py-4 bg-gray-800/50 border-b border-gray-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                     <User className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -303,7 +303,7 @@ export default function Sidebar() {
                 <LogOut className="h-5 w-5 text-gray-400" />
                 <span>Logout</span>
               </button>
-              <p className="text-xs text-gray-600 text-center mt-4">Versi 1.0.0</p>
+              <p className="text-xs text-gray-600 text-center mt-4">Versi 2.0.0</p>
             </div>
           </div>
         </div>
