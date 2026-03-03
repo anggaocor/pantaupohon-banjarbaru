@@ -546,7 +546,7 @@ export default function ProfilePage() {
 
         {/* Header */}
         <div className="relative mb-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 rounded-3xl blur-3xl"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-emerald-600/20 to-teal-600/20 rounded-3xl blur-3xl"></div>
           <div className="relative bg-gray-800 border border-gray-700 rounded-2xl p-8">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="relative">
@@ -558,7 +558,7 @@ export default function ProfilePage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
+                    <div className="w-full h-full bg-linear-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
                       <User className="h-12 w-12 text-white" />
                     </div>
                   )}
@@ -576,7 +576,7 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold bg-linear-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                   {profile.full_name}
                 </h1>
                 <p className="text-gray-400 flex items-center justify-center md:justify-start gap-2 mt-1">
@@ -923,12 +923,12 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-2">Alamat</p>
                     <div className="flex items-start gap-2 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                      <MapPin className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <MapPin className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
                       <p className="text-gray-300">{profile.address || "Belum ada alamat yang ditambahkan"}</p>
                     </div>
                   </div>
 
-                  <div className="p-5 bg-gradient-to-br from-emerald-600/10 to-emerald-600/5 rounded-xl border border-emerald-500/30">
+                  <div className="p-5 bg-linear-to-br from-emerald-600/10 to-emerald-600/5 rounded-xl border border-emerald-500/30">
                     <h4 className="font-medium text-emerald-400 mb-4 flex items-center">
                       <CheckCircle className="h-5 w-5 mr-2" />
                       Informasi Akun
@@ -1191,9 +1191,9 @@ export default function ProfilePage() {
             </Card>
 
             {/* Security Tips */}
-            <Card className="p-6 bg-gradient-to-br from-yellow-600/10 to-yellow-600/5 border border-yellow-500/30">
+            <Card className="p-6 bg-linear-to-br from-yellow-600/10 to-yellow-600/5 border border-yellow-500/30">
               <div className="flex items-start gap-3">
-                <Shield className="h-6 w-6 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <Shield className="h-6 w-6 text-yellow-400 shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-yellow-400 mb-2">Tips Keamanan Akun</h4>
                   <ul className="text-sm text-gray-400 space-y-2">

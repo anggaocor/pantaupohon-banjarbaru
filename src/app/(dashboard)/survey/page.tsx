@@ -608,7 +608,7 @@ Dilaporkan oleh: ${user?.email}
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-50 to-teal-50">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-emerald-50 to-teal-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-3"></div>
           <p className="text-gray-600">Memuat data survey...</p>
@@ -618,7 +618,7 @@ Dilaporkan oleh: ${user?.email}
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-teal-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-b from-emerald-50 to-teal-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Navigation */}
         <div className="mb-6 flex items-center justify-between">
@@ -695,7 +695,7 @@ Dilaporkan oleh: ${user?.email}
                 </div>
 
                 {/* Permohonan List */}
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                <div className="space-y-3 max-h-125 overflow-y-auto">
                   {filteredPermohonan.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
@@ -881,7 +881,7 @@ Dilaporkan oleh: ${user?.email}
                     {/* Referensi Jumlah Pohon di Form Survey */}
                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-4">
                       <div className="flex items-start gap-3">
-                        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-blue-800">
                             Referensi Permohonan
@@ -1188,7 +1188,7 @@ Dilaporkan oleh: ${user?.email}
                       <button
                         type="submit"
                         disabled={uploading}
-                        className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-2 transition-all shadow-lg shadow-emerald-200"
+                        className="px-8 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-2 transition-all shadow-lg shadow-emerald-200"
                       >
                         {uploading ? (
                           <>
@@ -1207,7 +1207,7 @@ Dilaporkan oleh: ${user?.email}
                         <button
                           type="button"
                           onClick={handleDownloadReport}
-                          className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 font-semibold flex items-center gap-2 transition-all shadow-lg shadow-purple-200"
+                          className="px-8 py-3 bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 font-semibold flex items-center gap-2 transition-all shadow-lg shadow-purple-200"
                         >
                           <Download className="h-5 w-5" />
                           Download Laporan

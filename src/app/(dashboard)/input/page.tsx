@@ -352,14 +352,14 @@ export default function InputPage() {
 
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-bold bg-linear-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent mb-2">
             Input Data Pemantauan Pohon
           </h1>
           <p className="text-gray-400">
             Lengkapi form berikut untuk menambahkan data permohonan atau pemeliharaan pohon
           </p>
           <div className="mt-4 inline-flex items-center gap-2 bg-gray-800 border border-gray-700 px-6 py-2 rounded-full">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-linear-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
               <User className="h-4 w-4 text-white" />
             </div>
             <span className="text-sm text-gray-300">
@@ -587,7 +587,7 @@ export default function InputPage() {
                   type="button"
                   onClick={detectLocation}
                   disabled={detectingLocation}
-                  className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-500 hover:to-teal-500 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/20"
+                  className="px-6 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-500 hover:to-teal-500 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/20"
                 >
                   {detectingLocation ? (
                     <>
@@ -641,7 +641,7 @@ export default function InputPage() {
 
             {/* Field untuk Permohonan */}
             {formData.type === "permohonan" && (
-              <div className="p-6 bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-blue-500/30 rounded-xl">
+              <div className="p-6 bg-linear-to-br from-blue-600/20 to-blue-600/5 border border-blue-500/30 rounded-xl">
                 <h3 className="font-semibold text-blue-400 mb-4 flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Data Permohonan
@@ -670,7 +670,7 @@ export default function InputPage() {
 
             {/* Field untuk Pemeliharaan */}
             {formData.type === "pemeliharaan" && (
-              <div className="p-6 bg-gradient-to-br from-green-600/20 to-green-600/5 border border-green-500/30 rounded-xl">
+              <div className="p-6 bg-linear-to-br from-green-600/20 to-green-600/5 border border-green-500/30 rounded-xl">
                 <h3 className="font-semibold text-green-400 mb-4 flex items-center gap-2">
                   <TreePine className="h-5 w-5" />
                   Data Pemeliharaan Pohon
@@ -784,7 +784,7 @@ export default function InputPage() {
                 <button
                   type="submit"
                   disabled={uploading}
-                  className="flex-1 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-3 transition-all shadow-lg shadow-emerald-600/20"
+                  className="flex-1 px-8 py-4 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-3 transition-all shadow-lg shadow-emerald-600/20"
                 >
                   {uploading ? (
                     <>
@@ -816,7 +816,7 @@ export default function InputPage() {
         </Card>
 
         {/* Info Panel */}
-        <Card className="mt-6 p-6 bg-gradient-to-br from-blue-600/10 to-blue-600/5 border border-blue-500/30">
+        <Card className="mt-6 p-6 bg-linear-to-br from-blue-600/10 to-blue-600/5 border border-blue-500/30">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-blue-500/20 rounded-lg">
               <CheckCircle className="h-5 w-5 text-blue-400" />

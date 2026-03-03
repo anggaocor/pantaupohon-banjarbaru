@@ -643,7 +643,7 @@ export default function DashboardPage() {
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-linear-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
               Dashboard Pemantauan Pohon
             </h1>
             <p className="text-gray-400 mt-1 flex items-center gap-2">
@@ -680,7 +680,7 @@ export default function DashboardPage() {
 
         {/* Welcome Message */}
         {user && (
-          <div className="mt-4 p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
+          <div className="mt-4 p-4 bg-linear-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
             <p className="text-gray-300">
               Selamat datang kembali,{' '}
               <span className="font-semibold text-emerald-400">
@@ -708,7 +708,7 @@ export default function DashboardPage() {
               onMouseLeave={() => setSelectedStat(null)}
             >
               {/* Background Gradient */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+              <div className={`absolute inset-0 bg-linear-to-br ${stat.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
               
               {/* Content */}
               <div className="relative z-10">
@@ -745,7 +745,7 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-400 mt-1">{locations.length} lokasi aktif</p>
             </div>
           </div>
-          <div className="h-[300px] rounded-xl overflow-hidden">
+          <div className="h-75 rounded-xl overflow-hidden">
             <MapComponent 
               locations={locations}
               height="100%"
@@ -784,7 +784,7 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-400 mt-1">Data 6 bulan terakhir</p>
             </div>
           </div>
-          <div className="h-[300px]">
+          <div className="h-75">
             <BarChart 
               data={comparisonData} 
               dataKey={["permohonan", "pemeliharaan"]}
@@ -807,7 +807,7 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-400 mt-1">Data 6 bulan terakhir</p>
             </div>
           </div>
-          <div className="h-[300px]">
+          <div className="h-75">
             <BarChart 
               data={pohonData} 
               dataKey={["dipangkas", "ditebang"]}

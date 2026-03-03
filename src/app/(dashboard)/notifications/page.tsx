@@ -348,7 +348,7 @@ export default function NotificationsPage() {
                       />
 
                       {/* Icon */}
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         {getNotificationIcon(notification.type)}
                       </div>
 

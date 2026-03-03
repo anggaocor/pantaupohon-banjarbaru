@@ -474,11 +474,11 @@ export default function UploadPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 rounded-xl border border-emerald-500/30">
+            <div className="p-3 bg-linear-to-br from-emerald-500/20 to-emerald-500/5 rounded-xl border border-emerald-500/30">
               <Upload className="h-6 w-6 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-linear-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                 Upload Data Excel/CSV
               </h1>
               <p className="text-gray-400 mt-1">
@@ -566,7 +566,7 @@ export default function UploadPage() {
                 <button
                   onClick={processUpload}
                   disabled={uploading || processing}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 transition-all"
+                  className="w-full px-4 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 transition-all"
                 >
                   {uploading ? (
                     <>
@@ -584,9 +584,9 @@ export default function UploadPage() {
             </Card>
 
             {/* Info Card */}
-            <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/30">
+            <Card className="p-6 bg-linear-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/30">
               <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-medium text-blue-400 mb-2">Panduan Upload</h4>
                   <ul className="text-sm text-gray-400 space-y-2">
@@ -651,7 +651,7 @@ export default function UploadPage() {
                       {previewData.rows.map((row, rowIndex) => (
                         <tr key={rowIndex} className="hover:bg-gray-700/50">
                           {row.slice(0, 8).map((cell, cellIndex) => (
-                            <td key={cellIndex} className="px-4 py-2 text-sm text-gray-300 truncate max-w-[150px]">
+                            <td key={cellIndex} className="px-4 py-2 text-sm text-gray-300 truncate max-w-37.5">
                               {cell || '-'}
                             </td>
                           ))}
@@ -724,7 +724,7 @@ export default function UploadPage() {
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-gray-400" />
-                              <span className="font-medium text-white text-sm truncate max-w-[200px]">
+                              <span className="font-medium text-white text-sm truncate max-w-50">
                                 {item.filename}
                               </span>
                             </div>

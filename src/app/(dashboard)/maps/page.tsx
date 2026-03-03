@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner'
 import moment from 'moment'
 import 'moment/locale/id'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 moment.locale('id')
 
@@ -48,8 +49,6 @@ export default function MapsPage() {
     status: 'all'
   })
 
-  const supabase = createClient()
-
   // Utility function untuk parse coordinate
   const parseCoordinate = useCallback((coordStr: string): { lat: number; lng: number } | null => {
     try {
@@ -74,8 +73,8 @@ export default function MapsPage() {
   const fetchLocations = useCallback(async () => {
     try {
       setLoading(true)
-      
-      const { data, error } = await supabase
+      const supabaseClient: SupabaseClient = createClient()
+      const { data, error } = await supabaseClient
         .from('pemantauan_pohon')
         .select('nama, keterangan, koordinat, type, status, created_at, pemangkasan, penebangan, jumlah_pohon')
         .order('created_at', { ascending: false })
@@ -119,7 +118,7 @@ export default function MapsPage() {
     } finally {
       setLoading(false)
     }
-  }, [supabase, parseCoordinate, isValidType, isValidStatus])
+  }, [SupabaseClient, parseCoordinate, isValidType, isValidStatus])
 
   const applyFilters = useCallback((locations: MapLocation[], filter: FilterState) => {
     let filtered = [...locations]
@@ -427,7 +426,7 @@ export default function MapsPage() {
           </div>
         </div>
         
-        <div className="h-[400px] md:h-[500px] lg:h-[600px]">
+        <div className="h-100 md:h-125 lg:h-150">
           <MapComponent 
             locations={filteredLocations}
             height="100%"

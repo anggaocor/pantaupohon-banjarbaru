@@ -73,7 +73,7 @@ export default function NotificationBell() {
           toast.custom((t) => (
             <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 max-w-sm">
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   {getNotificationIcon(newNotification.type, 'h-5 w-5')}
                 </div>
                 <div className="flex-1">
@@ -230,7 +230,7 @@ export default function NotificationBell() {
                 >
                   <div className="flex items-start gap-3">
                     {/* Icon */}
-                    <div className="flex-shrink-0 mt-1">
+                    <div className="shrink-0 mt-1">
                       {getNotificationIcon(notification.type)}
                     </div>
 

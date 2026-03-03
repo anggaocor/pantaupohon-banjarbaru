@@ -399,7 +399,7 @@ export default function EditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-emerald-50">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-green-50 to-emerald-50">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
           <p className="text-gray-600">Memuat data...</p>
@@ -409,7 +409,7 @@ export default function EditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-b from-green-50 to-emerald-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Navigation */}
         <div className="mb-6">
@@ -650,7 +650,7 @@ export default function EditPage() {
                   type="button"
                   onClick={detectLocation}
                   disabled={detectingLocation}
-                  className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-200"
+                  className="px-6 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-200"
                 >
                   {detectingLocation ? (
                     <>
@@ -704,7 +704,7 @@ export default function EditPage() {
 
             {/* Field untuk Permohonan */}
             {formData.type === "permohonan" && (
-              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+              <div className="p-6 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
                 <h3 className="font-semibold text-blue-800 mb-4 flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Data Permohonan
@@ -733,7 +733,7 @@ export default function EditPage() {
 
             {/* Field untuk Pemeliharaan */}
             {formData.type === "pemeliharaan" && (
-              <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+              <div className="p-6 bg-linear-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
                 <h3 className="font-semibold text-green-800 mb-4 flex items-center gap-2">
                   <TreePine className="h-5 w-5" />
                   Data Pemeliharaan Pohon
@@ -845,7 +845,7 @@ export default function EditPage() {
                 <button
                   type="submit"
                   disabled={uploading}
-                  className="flex-1 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-3 transition-all shadow-lg shadow-emerald-200"
+                  className="flex-1 px-8 py-4 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-3 transition-all shadow-lg shadow-emerald-200"
                 >
                   {uploading ? (
                     <>
@@ -864,7 +864,7 @@ export default function EditPage() {
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={uploading}
-                  className="px-8 py-4 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-3 transition-all shadow-lg shadow-red-200"
+                  className="px-8 py-4 bg-linear-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-3 transition-all shadow-lg shadow-red-200"
                 >
                   <Trash2 className="h-5 w-5" />
                   Hapus Data
@@ -923,9 +923,9 @@ export default function EditPage() {
         )}
 
         {/* Info Panel */}
-        <Card className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-0">
+        <Card className="mt-6 p-6 bg-linear-to-r from-blue-50 to-indigo-50 border-0">
           <div className="flex items-start gap-3">
-            <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <h3 className="font-semibold text-blue-800 mb-1">Informasi Edit Data</h3>
               <ul className="text-sm text-blue-700 space-y-1">

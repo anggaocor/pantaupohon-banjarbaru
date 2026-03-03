@@ -495,7 +495,7 @@ export default function LaporanPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-emerald-50">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-green-50 to-emerald-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-3"></div>
           <p className="text-gray-600">Memuat data...</p>
@@ -505,7 +505,7 @@ export default function LaporanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-b from-green-50 to-emerald-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
