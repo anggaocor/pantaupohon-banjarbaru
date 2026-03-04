@@ -202,7 +202,7 @@ export default function Sidebar() {
                 {!collapsed && (
                   <div className="mt-4 px-3 py-2">
                     <p className="text-xs text-gray-500">Versi 2.0.0</p>
-                    <p className="text-xs text-gray-600 mt-1">© {new Date().getFullYear()} SIPANTARU</p>
+                    <p className="text-xs text-gray-600 mt-1">© 2024 SIPANTARU</p>
                   </div>
                 )}
               </li>
