@@ -1,4 +1,6 @@
 // src/components/layout/Footer.tsx
+'use client';
+
 import { Heart } from 'lucide-react';
 
 const Footer = () => {

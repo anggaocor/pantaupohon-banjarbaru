@@ -1,6 +1,4 @@
 // app/survey/page.tsx
-"use client";
-
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";

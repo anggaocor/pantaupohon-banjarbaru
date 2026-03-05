@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import MapComponent from '@/src/components/maps/MapComponent'
 import { createClient } from '@/src/lib/supabase/client'

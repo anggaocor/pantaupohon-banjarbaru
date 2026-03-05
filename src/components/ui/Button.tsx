@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from '@/src/lib/utils/formatters'
 import { ButtonHTMLAttributes, forwardRef } from 'react'
 

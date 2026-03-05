@@ -1,3 +1,5 @@
+'use client';
+
 import { forwardRef, InputHTMLAttributes, useState } from 'react'
 import { cn } from '@/src/lib/utils/formatters'
 import { Eye, EyeOff } from 'lucide-react'
