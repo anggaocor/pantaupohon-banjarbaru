@@ -1,4 +1,6 @@
 // app/page.tsx
+'use client'
+
 import Button from '@/src/components/ui/Button'
 import Link from 'next/link'
 import Image from 'next/image'

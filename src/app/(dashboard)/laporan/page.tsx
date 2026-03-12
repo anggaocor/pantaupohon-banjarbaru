@@ -1,5 +1,7 @@
 // app/laporan/page.tsx
-import React, { useState, useEffect, useMemo } from "react";
+'use client'
+
+import React, { useState, useEffect, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { toast } from "sonner";
