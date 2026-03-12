@@ -1,19 +1,22 @@
 import { createBrowserClient } from '@supabase/ssr'
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-let supabase: SupabaseClient | null = null
 
 export function createClient() {
-  if (typeof window === 'undefined') {
-    throw new Error('createClient() hanya boleh dipanggil di browser')
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!supabase) {
-    supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  // Log untuk debugging (hapus di production)
+  console.log('Creating Supabase client with:', {
+    url: supabaseUrl ? '✅ exists' : '❌ missing',
+    key: supabaseAnonKey ? '✅ exists' : '❌ missing',
+    urlValue: supabaseUrl?.substring(0, 20) + '...' // tampilkan sebagian
+  })
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase environment variables. ' +
+      'Check your .env.local file.'
     )
   }
-
-  return supabase
+  
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
