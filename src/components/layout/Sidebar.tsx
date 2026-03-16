@@ -18,12 +18,14 @@ import {
   Bell,
   Search,
   TreePine,
-  UploadCloudIcon
+  UploadCloudIcon,
+  Shield
 } from 'lucide-react'
 import { createClient } from '@/src/lib/supabase/client'
 import { toast } from 'sonner'
 
-const navigation = [
+// Definisikan menu untuk semua role
+const adminNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Peta', href: '/maps', icon: Map },
   { name: 'Laporan', href: '/laporan', icon: FileText },
@@ -34,18 +36,48 @@ const navigation = [
   { name: 'Upload Data Excel/CSV', href: '/upload', icon: UploadCloudIcon },
 ]
 
+const userNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Peta', href: '/maps', icon: Map },
+  { name: 'Laporan', href: '/laporan', icon: FileText },
+  { name: 'Input Surat', href: '/input', icon: Mail },
+  { name: 'Profil', href: '/profile', icon: User },
+]
+
 export default function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const getUser = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user || null)
+      try {
+        const supabase = createClient()
+        
+        // Ambil session
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user || null)
+
+        if (session?.user) {
+          // Ambil profile untuk cek role
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          setProfile(profileData)
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error)
+      } finally {
+        setLoading(false)
+      }
     }
+    
     getUser()
   }, [])
 
@@ -61,9 +93,23 @@ export default function Sidebar() {
     }
   }
 
-  const getRoleBadge = () => {
-    // This would come from user metadata or profiles table
-    return 'user'
+  const isAdmin = profile?.role === 'admin'
+
+  // Pilih navigasi berdasarkan role
+  const navigation = isAdmin ? adminNavigation : userNavigation
+
+  if (loading) {
+    return (
+      <div className="hidden lg:flex lg:w-72 h-screen bg-gray-900 animate-pulse">
+        <div className="w-full p-4">
+          <div className="h-20 bg-gray-800 rounded-xl mb-4"></div>
+          <div className="h-16 bg-gray-800 rounded-xl mb-4"></div>
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-12 bg-gray-800 rounded-xl mb-2"></div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -126,19 +172,32 @@ export default function Sidebar() {
                   <p className="text-sm font-medium text-white truncate">
                     {user.email?.split('@')[0] || 'User'}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {user.email}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs text-gray-400 truncate">
+                      {user.email}
+                    </p>
+                    {isAdmin && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-600/20 border border-purple-600 rounded text-purple-400 text-[10px]">
+                        <Shield className="h-3 w-3" />
+                        Admin
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {collapsed && user && (
-            <div className="py-4 flex justify-center">
+            <div className="py-4 flex justify-center relative">
               <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                 <User className="h-5 w-5 text-white" />
               </div>
+              {isAdmin && (
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-600 rounded-full border-2 border-gray-900 flex items-center justify-center">
+                  <Shield className="h-2 w-2 text-white" />
+                </span>
+              )}
             </div>
           )}
 
@@ -251,9 +310,17 @@ export default function Sidebar() {
                     <p className="text-sm font-medium text-white truncate">
                       {user.email?.split('@')[0] || 'User'}
                     </p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {user.email}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-gray-400 truncate">
+                        {user.email}
+                      </p>
+                      {isAdmin && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-600/20 border border-purple-600 rounded text-purple-400 text-[10px]">
+                          <Shield className="h-3 w-3" />
+                          Admin
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

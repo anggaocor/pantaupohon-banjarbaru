@@ -16,7 +16,6 @@ import {
 import { toast } from 'sonner'
 import moment from 'moment'
 import 'moment/locale/id'
-import { SupabaseClient } from '@supabase/supabase-js'
 
 moment.locale('id')
 
@@ -37,6 +36,27 @@ interface FilterState {
   status: 'all' | 'pending' | 'completed' | 'in_progress'
 }
 
+// Utility function untuk mendapatkan teks tipe
+const getTypeText = (type: string): string => {
+  switch (type) {
+    case 'permohonan': return 'Permohonan'
+    case 'pemeliharaan': return 'Pemeliharaan'
+    case 'pemangkasan': return 'Pemangkasan'
+    case 'penebangan': return 'Penebangan'
+    default: return type
+  }
+}
+
+// Utility function untuk mendapatkan teks status
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'completed': return 'Selesai'
+    case 'pending': return 'Menunggu'
+    case 'in_progress': return 'Dalam Proses'
+    default: return status
+  }
+}
+
 export default function MapsPage() {
   const [locations, setLocations] = useState<MapLocation[]>([])
   const [filteredLocations, setFilteredLocations] = useState<MapLocation[]>([])
@@ -52,8 +72,16 @@ export default function MapsPage() {
   // Utility function untuk parse coordinate
   const parseCoordinate = useCallback((coordStr: string): { lat: number; lng: number } | null => {
     try {
+      // Memisahkan string koordinat menjadi latitude dan longitude
+      // Contoh: "-6.2088, 106.8456" → [-6.2088, 106.8456]
       const [lat, lng] = coordStr.split(',').map(coord => parseFloat(coord.trim()))
+      
+      // Validasi hasil parsing
       if (isNaN(lat) || isNaN(lng)) return null
+      
+      // Validasi range koordinat
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
+      
       return { lat, lng }
     } catch {
       return null
@@ -73,7 +101,7 @@ export default function MapsPage() {
   const fetchLocations = useCallback(async () => {
     try {
       setLoading(true)
-      const supabaseClient: SupabaseClient = createClient()
+      const supabaseClient = createClient()
       const { data, error } = await supabaseClient
         .from('pemantauan_pohon')
         .select('nama, keterangan, koordinat, type, status, created_at, pemangkasan, penebangan, jumlah_pohon')
@@ -83,20 +111,24 @@ export default function MapsPage() {
 
       if (data && data.length > 0) {
         const formattedLocations = data
+          // Filter: hanya data yang memiliki koordinat
           .filter(loc => loc.koordinat && typeof loc.koordinat === 'string')
           .map(loc => {
+            // Parse koordinat string menjadi {lat, lng}
             const coord = parseCoordinate(loc.koordinat)
             if (!coord) return null
             
             const type = loc.type || 'permohonan'
             const status = loc.status || 'pending'
             
+            // Validasi type dan status
             if (!isValidType(type) || !isValidStatus(status)) {
               return null
             }
             
+            // Return object dengan format MapLocation
             return {
-              ...coord,
+              ...coord, // Menyebarkan {lat, lng}
               name: loc.nama || 'Lokasi Tanpa Nama',
               description: loc.keterangan || 'Tidak ada keterangan',
               type,
@@ -105,9 +137,11 @@ export default function MapsPage() {
               jumlah_pohon: loc.pemangkasan || loc.penebangan || loc.jumlah_pohon || 0
             } as MapLocation
           })
-          .filter((loc): loc is MapLocation => loc !== null)
+          .filter((loc): loc is MapLocation => loc !== null) // Filter null values
 
+        console.log('Formatted locations:', formattedLocations) // Debug
         setLocations(formattedLocations)
+        setFilteredLocations(formattedLocations) // Set filtered locations juga
       } else {
         setLocations([])
         setFilteredLocations([])
@@ -118,7 +152,7 @@ export default function MapsPage() {
     } finally {
       setLoading(false)
     }
-  }, [SupabaseClient, parseCoordinate, isValidType, isValidStatus])
+  }, [parseCoordinate, isValidType, isValidStatus])
 
   const applyFilters = useCallback((locations: MapLocation[], filter: FilterState) => {
     let filtered = [...locations]
@@ -219,41 +253,13 @@ export default function MapsPage() {
     setFilter({ type: 'all', dateRange: 'all', status: 'all' })
   }, [])
 
-  const getTypeText = useCallback((type: string) => {
-    switch (type) {
-      case 'permohonan': return 'Permohonan'
-      case 'pemeliharaan': return 'Pemeliharaan'
-      case 'pemangkasan': return 'Pemangkasan'
-      case 'penebangan': return 'Penebangan'
-      default: return type
-    }
-  }, [])
-
-  const getStatusText = useCallback((status: string) => {
-    switch (status) {
-      case 'completed': return 'Selesai'
-      case 'pending': return 'Menunggu'
-      case 'in_progress': return 'Dalam Proses'
-      default: return status
-    }
-  }, [])
-
   const getTypeColor = useCallback((type: string) => {
     switch (type) {
-      case 'permohonan': return 'bg-blue-500'
-      case 'pemeliharaan': return 'bg-green-500'
-      case 'pemangkasan': return 'bg-yellow-500'
-      case 'penebangan': return 'bg-red-500'
-      default: return 'bg-gray-500'
-    }
-  }, [])
-
-  const getStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500'
-      case 'pending': return 'bg-yellow-500'
-      case 'in_progress': return 'bg-blue-500'
-      default: return 'bg-gray-500'
+      case 'permohonan': return 'blue'
+      case 'pemeliharaan': return 'green'
+      case 'pemangkasan': return 'yellow'
+      case 'penebangan': return 'red'
+      default: return 'gray'
     }
   }, [])
 
@@ -266,7 +272,7 @@ export default function MapsPage() {
     }
   }, [locations])
 
-  const handleFilterChange = useCallback((key: keyof FilterState, value: string) => {
+  const handleFilterChange = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilter(prev => ({ ...prev, [key]: value }))
   }, [])
 
@@ -336,7 +342,7 @@ export default function MapsPage() {
               </label>
               <select
                 value={filter.type}
-                onChange={(e) => handleFilterChange('type', e.target.value)}
+                onChange={(e) => handleFilterChange('type', e.target.value as FilterState['type'])}
                 className="w-full bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="all">Semua Kegiatan</option>
@@ -353,7 +359,7 @@ export default function MapsPage() {
               </label>
               <select
                 value={filter.dateRange}
-                onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                onChange={(e) => handleFilterChange('dateRange', e.target.value as FilterState['dateRange'])}
                 className="w-full bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="all">Semua Waktu</option>
@@ -369,7 +375,7 @@ export default function MapsPage() {
               </label>
               <select
                 value={filter.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                onChange={(e) => handleFilterChange('status', e.target.value as FilterState['status'])}
                 className="w-full bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="all">Semua Status</option>
@@ -413,7 +419,7 @@ export default function MapsPage() {
         </div>
       )}
 
-      {/* Map Container */}
+      {/* Map Container - PERBAIKAN: gunakan height yang valid */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden mb-6">
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between">
@@ -426,6 +432,7 @@ export default function MapsPage() {
           </div>
         </div>
         
+        {/* PERBAIKAN: gunakan height dengan nilai eksplisit */}
         <div className="h-100 md:h-125 lg:h-150">
           <MapComponent 
             locations={filteredLocations}
@@ -436,12 +443,12 @@ export default function MapsPage() {
         </div>
       </div>
 
-      {/* Statistics */}
+      {/* Statistics - PERBAIKAN: dynamic colors */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-blue-400" />
+            <div className={`w-10 h-10 rounded-lg bg-${getTypeColor('permohonan')}-500/20 flex items-center justify-center`}>
+              <MapPin className={`h-5 w-5 text-${getTypeColor('permohonan')}-400`} />
             </div>
             <div>
               <p className="text-sm text-gray-400">Permohonan</p>
@@ -452,8 +459,8 @@ export default function MapsPage() {
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-green-400" />
+            <div className={`w-10 h-10 rounded-lg bg-${getTypeColor('pemeliharaan')}-500/20 flex items-center justify-center`}>
+              <MapPin className={`h-5 w-5 text-${getTypeColor('pemeliharaan')}-400`} />
             </div>
             <div>
               <p className="text-sm text-gray-400">Pemeliharaan</p>
@@ -464,8 +471,8 @@ export default function MapsPage() {
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-yellow-400" />
+            <div className={`w-10 h-10 rounded-lg bg-${getTypeColor('pemangkasan')}-500/20 flex items-center justify-center`}>
+              <MapPin className={`h-5 w-5 text-${getTypeColor('pemangkasan')}-400`} />
             </div>
             <div>
               <p className="text-sm text-gray-400">Pemangkasan</p>
@@ -476,8 +483,8 @@ export default function MapsPage() {
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-red-400" />
+            <div className={`w-10 h-10 rounded-lg bg-${getTypeColor('penebangan')}-500/20 flex items-center justify-center`}>
+              <MapPin className={`h-5 w-5 text-${getTypeColor('penebangan')}-400`} />
             </div>
             <div>
               <p className="text-sm text-gray-400">Penebangan</p>

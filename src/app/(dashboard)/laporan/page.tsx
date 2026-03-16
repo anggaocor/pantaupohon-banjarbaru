@@ -1,7 +1,7 @@
 // app/laporan/page.tsx
 'use client'
 
-import React, { useState, useEffect, useMemo, use } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { toast } from "sonner";
@@ -29,7 +29,9 @@ import {
   Scissors,
   Axe,
   TreePine,
-  ClipboardList
+  ClipboardList,
+  Shield,
+  Ban
 } from "lucide-react";
 import moment from "moment";
 import "moment/locale/id";
@@ -86,16 +88,21 @@ interface ProfileData {
   id: string;
   email: string;
   full_name: string;
+  role: string;
 }
 
 export default function LaporanPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PermohonanData[]>([]);
   const [surveys, setSurveys] = useState<Record<string, SurveyData>>({});
   const [photos, setPhotos] = useState<Record<string, SurveyPhoto[]>>({});
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
+  
+  // Role-based state
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState("");
@@ -130,23 +137,44 @@ export default function LaporanPage() {
       }
 
       setUser(session.user);
-      await fetchData();
+      
+      // Fetch profile untuk cek role
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+      
+      setProfile(profileData);
+      
+      // Cek apakah user admin
+      const userIsAdmin = profileData?.role === "admin";
+      setIsAdmin(userIsAdmin);
+      
+      await fetchData(userIsAdmin, session.user.id);
       setLoading(false);
     };
 
     checkSession();
   }, [router]);
 
-  const fetchData = async () => {
+  const fetchData = async (adminStatus: boolean, userId: string) => {
     try {
       setLoading(true);
       const supabase = createClient();
 
-      // Fetch pemantauan_pohon data
-      const { data: permohonanData, error: permohonanError } = await supabase
+      // Fetch pemantauan_pohon data berdasarkan role
+      let query = supabase
         .from("pemantauan_pohon")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // Jika bukan admin, filter berdasarkan user_id
+      if (!adminStatus) {
+        query = query.eq("user_id", userId);
+      }
+
+      const { data: permohonanData, error: permohonanError } = await query;
 
       if (permohonanError) throw permohonanError;
 
@@ -220,6 +248,14 @@ export default function LaporanPage() {
   const handleDelete = async () => {
     if (!itemToDelete) return;
 
+    // Cek akses: Admin bisa hapus semua, user biasa hanya bisa hapus miliknya
+    if (!isAdmin && itemToDelete.user_id !== user?.id) {
+      toast.error("Anda tidak memiliki akses untuk menghapus data ini");
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      return;
+    }
+
     try {
       const supabase = createClient();
 
@@ -258,7 +294,7 @@ export default function LaporanPage() {
       toast.success("Data berhasil dihapus");
       setShowDeleteModal(false);
       setItemToDelete(null);
-      await fetchData();
+      await fetchData(isAdmin, user?.id);
 
     } catch (error: any) {
       console.error("Error deleting data:", error);
@@ -267,6 +303,12 @@ export default function LaporanPage() {
   };
 
   const handleEdit = (item: PermohonanData) => {
+    // Cek akses: Admin bisa edit semua, user biasa hanya bisa edit miliknya
+    if (!isAdmin && item.user_id !== user?.id) {
+      toast.error("Anda tidak memiliki akses untuk mengedit data ini");
+      return;
+    }
+
     if (item.type === 'permohonan') {
       // Untuk permohonan, arahkan ke halaman survey dengan parameter ID
       router.push(`/survey?permohonan=${item.id}`);
@@ -446,7 +488,8 @@ export default function LaporanPage() {
       'Proses',
       'Kondisi Pohon',
       'Surveyor',
-      'Tanggal Survey'
+      'Tanggal Survey',
+      'Dibuat Oleh'
     ];
 
     const rows = filteredData.map(item => {
@@ -454,6 +497,7 @@ export default function LaporanPage() {
       const process = getProcessStatus(item);
       const condition = survey ? survey.condition : 'Belum Survey';
       const pohonInfo = getPohonInfo(item);
+      const creator = profiles[item.user_id]?.email || item.user_id;
       
       return [
         item.nama,
@@ -472,7 +516,8 @@ export default function LaporanPage() {
         process.text,
         getConditionBadge(condition).text,
         survey?.surveyor_name || '-',
-        survey ? formatDate(survey.survey_date) : '-'
+        survey ? formatDate(survey.survey_date) : '-',
+        creator
       ];
     });
 
@@ -507,16 +552,37 @@ export default function LaporanPage() {
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header dengan Role Info */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Laporan Data Pemantauan Pohon
-              </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Laporan Data Pemantauan Pohon
+                </h1>
+                {isAdmin ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 border border-purple-300 rounded-full text-purple-700 text-sm">
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 border border-blue-300 rounded-full text-blue-700 text-sm">
+                    <User className="h-4 w-4" />
+                    User
+                  </span>
+                )}
+              </div>
               <p className="text-gray-600">
-                Monitoring dan tracking semua data permohonan dan pemeliharaan pohon
+                {isAdmin 
+                  ? "Monitoring dan tracking semua data permohonan dan pemeliharaan pohon"
+                  : "Data permohonan dan pemeliharaan pohon milik Anda"
+                }
               </p>
+              {!isAdmin && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Menampilkan {data.length} data milik Anda
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -534,7 +600,7 @@ export default function LaporanPage() {
                 Print
               </button>
               <button
-                onClick={fetchData}
+                onClick={() => fetchData(isAdmin, user?.id)}
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2 transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -747,6 +813,8 @@ export default function LaporanPage() {
                     const statusBadge = getStatusBadge(item.status);
                     const conditionBadge = getConditionBadge(survey?.condition);
                     const pohonInfo = getPohonInfo(item);
+                    const canEdit = isAdmin || item.user_id === user?.id;
+                    const canDelete = isAdmin || item.user_id === user?.id;
 
                     return (
                       <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -762,6 +830,12 @@ export default function LaporanPage() {
                               <span className={`px-2 py-1 text-xs rounded-full ${typeBadge.className}`}>
                                 {typeBadge.text}
                               </span>
+                              {!isAdmin && item.user_id !== user?.id && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                  <Ban className="h-3 w-3" />
+                                  Bukan milik saya
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-gray-600">{item.perihal}</p>
                             <div className="text-xs text-gray-500 space-y-1">
@@ -869,32 +943,52 @@ export default function LaporanPage() {
                               <Eye className="h-4 w-4" />
                             </button>
                             
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className={`p-2 rounded-lg transition-colors ${
-                                item.type === 'permohonan'
-                                  ? 'text-purple-600 hover:bg-purple-50'
-                                  : 'text-emerald-600 hover:bg-emerald-50'
-                              }`}
-                              title={item.type === 'permohonan' ? 'Survey Data' : 'Edit Data'}
-                            >
-                              {item.type === 'permohonan' ? (
-                                <ClipboardList className="h-4 w-4" />
-                              ) : (
+                            {canEdit ? (
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  item.type === 'permohonan'
+                                    ? 'text-purple-600 hover:bg-purple-50'
+                                    : 'text-emerald-600 hover:bg-emerald-50'
+                                }`}
+                                title={item.type === 'permohonan' ? 'Survey Data' : 'Edit Data'}
+                              >
+                                {item.type === 'permohonan' ? (
+                                  <ClipboardList className="h-4 w-4" />
+                                ) : (
+                                  <Edit className="h-4 w-4" />
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
+                                title="Tidak memiliki akses edit"
+                              >
                                 <Edit className="h-4 w-4" />
-                              )}
-                            </button>
+                              </button>
+                            )}
                             
-                            <button
-                              onClick={() => {
-                                setItemToDelete(item);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Hapus Data"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {canDelete ? (
+                              <button
+                                onClick={() => {
+                                  setItemToDelete(item);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Hapus Data"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
+                                title="Tidak memiliki akses hapus"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1221,26 +1315,28 @@ export default function LaporanPage() {
                 </div>
 
                 <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
-                  <button
-                    onClick={() => handleEdit(selectedItem)}
-                    className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                      selectedItem.type === 'permohonan'
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    }`}
-                  >
-                    {selectedItem.type === 'permohonan' ? (
-                      <>
-                        <ClipboardList className="h-4 w-4" />
-                        Survey Data
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="h-4 w-4" />
-                        Edit Data
-                      </>
-                    )}
-                  </button>
+                  {selectedItem && (isAdmin || selectedItem.user_id === user?.id) && (
+                    <button
+                      onClick={() => handleEdit(selectedItem)}
+                      className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                        selectedItem.type === 'permohonan'
+                          ? 'bg-purple-600 text-white hover:bg-purple-700'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      }`}
+                    >
+                      {selectedItem.type === 'permohonan' ? (
+                        <>
+                          <ClipboardList className="h-4 w-4" />
+                          Survey Data
+                        </>
+                      ) : (
+                        <>
+                          <Edit className="h-4 w-4" />
+                          Edit Data
+                        </>
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowDetailModal(false)}
                     className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"

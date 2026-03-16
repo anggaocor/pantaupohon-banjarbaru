@@ -69,6 +69,8 @@ interface PermohonanData {
   nomor_surat: string;
   tanggal_surat: string;
   alamat: string;
+  kecamatan: string;
+  kelurahan: string;
   koordinat: string;
   kontak: string;
   type: string;
@@ -553,6 +555,8 @@ Perihal: ${selectedPermohonan?.perihal}
 Nomor Surat: ${selectedPermohonan?.nomor_surat}
 Tanggal Surat: ${moment(selectedPermohonan?.tanggal_surat).format('DD MMMM YYYY')}
 Alamat: ${selectedPermohonan?.alamat}
+Kecamatan: ${selectedPermohonan?.kecamatan || '-'}
+Kelurahan: ${selectedPermohonan?.kelurahan || '-'}
 Kontak: ${selectedPermohonan?.kontak || '-'}
 Jumlah Pohon dalam Permohonan: ${selectedPermohonan?.jumlah_pohon || 0} pohon
 

@@ -24,7 +24,8 @@ import {
   Clock,
   CheckCircle,
   BarChart3,
-  TreePine
+  TreePine,
+  User
 } from 'lucide-react'
 
 /* ===========================
@@ -33,7 +34,14 @@ import {
 
 const MapComponent = dynamic(
   () => import('@/src/components/maps/MapComponent'),
-  { ssr: false }
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-xl">
+        <div className="animate-pulse text-gray-400">Memuat peta...</div>
+      </div>
+    )
+  }
 )
 
 const BarChart = dynamic(
@@ -73,7 +81,9 @@ interface MapLocation {
 
 interface RecentActivity {
   id: string
+  user_id: string
   user_name: string
+  user_email?: string
   action: string
   created_at: string
   status: 'completed' | 'pending' | 'in_progress'
@@ -88,6 +98,28 @@ interface User {
 
 interface Profile {
   full_name?: string
+  email?: string
+}
+
+// Interface untuk data dari database
+interface PemantauanPohonRow {
+  id: string
+  nama: string
+  perihal: string
+  nomor_surat: string
+  tanggal_surat: string
+  alamat: string
+  koordinat: string
+  kontak: string
+  type: string
+  keterangan: string
+  status: string
+  jumlah_pohon: number
+  pemangkasan: number
+  penebangan: number
+  user_id: string
+  created_at: string
+  updated_at: string
 }
 
 export default function DashboardPage() {
@@ -263,69 +295,106 @@ export default function DashboardPage() {
         // Utility function untuk validasi coordinate
         const parseCoordinate = (coordStr: string): { lat: number; lng: number } | null => {
           try {
-            const [lat, lng] = coordStr.split(',').map(coord => parseFloat(coord.trim()));
-            if (isNaN(lat) || isNaN(lng)) return null;
-            return { lat, lng };
+            // Bersihkan string koordinat
+            const cleanStr = coordStr.replace(/[°\s]/g, '').trim()
+            const [lat, lng] = cleanStr.split(',').map(coord => {
+              const parsed = parseFloat(coord.trim())
+              return isNaN(parsed) ? null : parsed
+            })
+            
+            if (lat === null || lng === null) return null
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
+            
+            return { lat, lng }
           } catch {
-            return null;
+            return null
           }
         }
 
         // Utility function untuk validasi type
         const isValidType = (type: string): type is MapLocation['type'] => {
-          return ['permohonan', 'pemeliharaan', 'pemangkasan', 'penebangan'].includes(type);
+          return ['permohonan', 'pemeliharaan'].includes(type)
         }
           
         // Utility function untuk validasi status
         const isValidStatus = (status: any): status is MapLocation['status'] => {
-          return ['pending', 'completed', 'in_progress'].includes(status);
+          return ['pending', 'completed', 'in_progress'].includes(status)
         }
 
         // Process map locations
         const locations = allData
           ?.filter(item => item.koordinat && typeof item.koordinat === 'string')
           .map(item => {
-            const coord = parseCoordinate(item.koordinat);
-            if (!coord) return null;
+            const coord = parseCoordinate(item.koordinat)
+            if (!coord) return null
             
-            const type = item.type as string;
-            const status = item.status as string;
+            const type = item.type as string
+            const status = item.status as string
             
             if (!isValidType(type) || !isValidStatus(status)) {
-              return null;
+              return null
             }
             
             return {
-              ...coord,
+              lat: coord.lat,
+              lng: coord.lng,
               name: item.nama || 'Lokasi Tanpa Nama',
               description: item.keterangan || 'Tidak ada keterangan',
               type,
               status,
               date: item.created_at,
               jumlah_pohon: item.jumlah_pohon || 0
-            } as MapLocation;
+            } as MapLocation
           })
           .filter((loc): loc is MapLocation => loc !== null)
-          .slice(0, 50);
+          .slice(0, 50)
 
-        setMapLocations(locations || []);
+        console.log('Map locations:', locations)
+        setMapLocations(locations || [])
 
-        // Process recent activities
+        // Dapatkan semua user_id yang unik
+        const userIds = [...new Set(allData?.map(item => item.user_id) || [])]
+        
+        // Fetch profiles untuk user_id tersebut
+        let profilesMap: Record<string, any> = {}
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', userIds)
+
+          if (profilesData) {
+            profilesMap = profilesData.reduce((acc, profile) => {
+              acc[profile.id] = profile
+              return acc
+            }, {} as Record<string, any>)
+          }
+        }
+
+        // Process recent activities dengan nama user dari profilesMap
         const activities = allData
           ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5)
-          .map(item => ({
-            id: item.id,
-            user_name: 'Pengguna',
-            action: `${item.type === 'permohonan' ? 'Permohonan' : 
-                     item.type === 'pemeliharaan' ? 'Pemeliharaan' : 
-                     item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama || ''}`,
-            created_at: item.created_at,
-            status: item.status as 'completed' | 'pending' | 'in_progress',
-            type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-            location: item.alamat
-          })) || []
+          .map(item => {
+            const userProfile = profilesMap[item.user_id]
+            const userName = userProfile?.full_name || 
+                            userProfile?.email?.split('@')[0] || 
+                            'Pengguna'
+            
+            return {
+              id: item.id,
+              user_id: item.user_id,
+              user_name: userName,
+              user_email: userProfile?.email,
+              action: `${item.type === 'permohonan' ? 'Permohonan' : 'Pemeliharaan'} - ${item.perihal || item.nama || ''}`,
+              created_at: item.created_at,
+              status: item.status as 'completed' | 'pending' | 'in_progress',
+              type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
+              location: item.alamat
+            }
+          }) || []
 
+        console.log('Recent activities:', activities)
         setRecentActivities(activities)
 
       } catch (error: any) {
@@ -342,7 +411,7 @@ export default function DashboardPage() {
   }, [timeRange, user])
 
   const handleRefresh = async () => {
-    if (!user) return;
+    if (!user) return
     
     const supabase = createClient()
     try {
@@ -470,68 +539,103 @@ export default function DashboardPage() {
       // Utility function untuk validasi coordinate
       const parseCoordinate = (coordStr: string): { lat: number; lng: number } | null => {
         try {
-          const [lat, lng] = coordStr.split(',').map(coord => parseFloat(coord.trim()));
-          if (isNaN(lat) || isNaN(lng)) return null;
-          return { lat, lng };
+          // Bersihkan string koordinat
+          const cleanStr = coordStr.replace(/[°\s]/g, '').trim()
+          const [lat, lng] = cleanStr.split(',').map(coord => {
+            const parsed = parseFloat(coord.trim())
+            return isNaN(parsed) ? null : parsed
+          })
+          
+          if (lat === null || lng === null) return null
+          if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
+          
+          return { lat, lng }
         } catch {
-          return null;
+          return null
         }
       }
 
       // Utility function untuk validasi type
       const isValidType = (type: string): type is MapLocation['type'] => {
-        return ['permohonan', 'pemeliharaan', 'pemangkasan', 'penebangan'].includes(type);
+        return ['permohonan', 'pemeliharaan'].includes(type)
       }
         
       // Utility function untuk validasi status
       const isValidStatus = (status: any): status is MapLocation['status'] => {
-        return ['pending', 'completed', 'in_progress'].includes(status);
+        return ['pending', 'completed', 'in_progress'].includes(status)
       }
 
       // Process map locations
       const locations = allData
         ?.filter(item => item.koordinat && typeof item.koordinat === 'string')
         .map(item => {
-          const coord = parseCoordinate(item.koordinat);
-          if (!coord) return null;
+          const coord = parseCoordinate(item.koordinat)
+          if (!coord) return null
           
-          const type = item.type as string;
-          const status = item.status as string;
+          const type = item.type as string
+          const status = item.status as string
           
           if (!isValidType(type) || !isValidStatus(status)) {
-            return null;
+            return null
           }
           
           return {
-            ...coord,
+            lat: coord.lat,
+            lng: coord.lng,
             name: item.nama || 'Lokasi Tanpa Nama',
             description: item.keterangan || 'Tidak ada keterangan',
             type,
             status,
             date: item.created_at,
             jumlah_pohon: item.jumlah_pohon || 0
-          } as MapLocation;
+          } as MapLocation
         })
         .filter((loc): loc is MapLocation => loc !== null)
-        .slice(0, 50);
+        .slice(0, 50)
 
-      setMapLocations(locations || []);
+      setMapLocations(locations || [])
 
-      // Process recent activities
+      // Dapatkan semua user_id yang unik
+      const userIds = [...new Set(allData?.map(item => item.user_id) || [])]
+      
+      // Fetch profiles untuk user_id tersebut
+      let profilesMap: Record<string, any> = {}
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', userIds)
+
+        if (profilesData) {
+          profilesMap = profilesData.reduce((acc, profile) => {
+            acc[profile.id] = profile
+            return acc
+          }, {} as Record<string, any>)
+        }
+      }
+
+      // Process recent activities dengan nama user dari profilesMap
       const activities = allData
         ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 5)
-        .map(item => ({
-          id: item.id,
-          user_name: 'Pengguna',
-          action: `${item.type === 'permohonan' ? 'Permohonan' : 
-                   item.type === 'pemeliharaan' ? 'Pemeliharaan' : 
-                   item.type === 'pemangkasan' ? 'Pemangkasan' : 'Penebangan'} - ${item.perihal || item.nama || ''}`,
-          created_at: item.created_at,
-          status: item.status as 'completed' | 'pending' | 'in_progress',
-          type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-          location: item.alamat
-        })) || []
+        .map(item => {
+          const userProfile = profilesMap[item.user_id]
+          const userName = userProfile?.full_name || 
+                          userProfile?.email?.split('@')[0] || 
+                          'Pengguna'
+          
+          return {
+            id: item.id,
+            user_id: item.user_id,
+            user_name: userName,
+            user_email: userProfile?.email,
+            action: `${item.type === 'permohonan' ? 'Permohonan' : 'Pemeliharaan'} - ${item.perihal || item.nama || ''}`,
+            created_at: item.created_at,
+            status: item.status as 'completed' | 'pending' | 'in_progress',
+            type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
+            location: item.alamat
+          }
+        }) || []
 
       setRecentActivities(activities)
 
@@ -742,16 +846,28 @@ export default function DashboardPage() {
                 <MapPin className="h-5 w-5 text-emerald-400" />
                 Peta Lokasi
               </h3>
-              <p className="text-sm text-gray-400 mt-1">{locations.length} lokasi aktif</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {locations.length} lokasi aktif dari {totalData} total data
+              </p>
             </div>
           </div>
-          <div className="h-75 rounded-xl overflow-hidden">
-            <MapComponent 
-              locations={locations}
-              height="100%"
-              showControls={true}
-              showLegend={true}
-            />
+          <div className="h-96 rounded-xl overflow-hidden bg-gray-900">
+            {locations.length > 0 ? (
+              <MapComponent 
+                locations={locations}
+                height="100%"
+                showControls={true}
+                showLegend={true}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-600" />
+                  <p>Tidak ada lokasi dengan koordinat valid</p>
+                  <p className="text-sm mt-2">Pastikan data memiliki koordinat yang benar</p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="flex items-center gap-2">
@@ -761,14 +877,6 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
               <span className="text-sm text-gray-300">Pemeliharaan</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <span className="text-sm text-gray-300">Pemangkasan</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-sm text-gray-300">Penebangan</span>
             </div>
           </div>
         </div>
@@ -858,7 +966,10 @@ export default function DashboardPage() {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-white">{activity.user_name}</span>
+                        <span className="font-medium text-white flex items-center gap-1">
+                          <User className="h-4 w-4 text-gray-400" />
+                          {activity.user_name}
+                        </span>
                         <span className="text-sm text-gray-400">•</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${type.bg} ${type.text}`}>
                           {type.label}
@@ -866,7 +977,10 @@ export default function DashboardPage() {
                       </div>
                       <p className="text-gray-300 text-sm truncate">{activity.action}</p>
                       {activity.location && (
-                        <p className="text-xs text-gray-500 mt-1">{activity.location}</p>
+                        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {activity.location}
+                        </p>
                       )}
                     </div>
                     

@@ -1,0 +1,5 @@
+// src/types/leaflet.d.ts atau types/leaflet.d.ts
+declare module 'leaflet/dist/leaflet.css' {
+  const content: any
+  export default content
+}
