@@ -38,7 +38,9 @@ import {
   Home,
   Hash,
   Loader2,
-  Info
+  Info,
+  Scissors,
+  Trash2
 } from "lucide-react";
 
 moment.locale('id');
@@ -60,6 +62,9 @@ interface SurveyData {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
+  jumlah_tebang?: number;
+  jumlah_pangkas?: number;
+  tindakan?: 'tebang' | 'pangkas' | 'tebang_dan_pangkas' | 'tidak_ada';
 }
 
 interface PermohonanData {
@@ -118,7 +123,10 @@ function SurveyPageContent() {
     health_score: 50,
     recommendations: "",
     notes: "",
-    status: "completed" as "pending" | "completed" | "needs_followup"
+    status: "completed" as "pending" | "completed" | "needs_followup",
+    jumlah_tebang: 0,
+    jumlah_pangkas: 0,
+    tindakan: "tidak_ada" as "tebang" | "pangkas" | "tebang_dan_pangkas" | "tidak_ada"
   });
 
   useEffect(() => {
@@ -225,7 +233,10 @@ function SurveyPageContent() {
           health_score: existingSurvey.health_score || 50,
           recommendations: existingSurvey.recommendations || "",
           notes: existingSurvey.notes || "",
-          status: existingSurvey.status || "pending"
+          status: existingSurvey.status || "pending",
+          jumlah_tebang: existingSurvey.jumlah_tebang || 0,
+          jumlah_pangkas: existingSurvey.jumlah_pangkas || 0,
+          tindakan: existingSurvey.tindakan || "tidak_ada"
         });
 
         // Fetch existing photos
@@ -252,7 +263,10 @@ function SurveyPageContent() {
           health_score: 50,
           recommendations: "",
           notes: "",
-          status: "completed"
+          status: "completed",
+          jumlah_tebang: 0,
+          jumlah_pangkas: 0,
+          tindakan: "tidak_ada"
         });
       }
     } catch (error) {
@@ -370,7 +384,32 @@ function SurveyPageContent() {
       return false;
     }
 
+    // Validasi jumlah tebang dan pangkas
+    if (formData.jumlah_tebang < 0 || formData.jumlah_pangkas < 0) {
+      toast.error("Jumlah pohon tidak boleh negatif");
+      return false;
+    }
+
+    const totalTindakan = formData.jumlah_tebang + formData.jumlah_pangkas;
+    if (totalTindakan > (selectedPermohonan?.jumlah_pohon || 0)) {
+      toast.error(`Total pohon yang ditindak (${totalTindakan}) melebihi jumlah pohon dalam permohonan (${selectedPermohonan?.jumlah_pohon})`);
+      return false;
+    }
+
     return true;
+  };
+
+  // Fungsi untuk mengupdate tindakan berdasarkan jumlah tebang dan pangkas
+  const updateTindakan = (tebang: number, pangkas: number) => {
+    if (tebang > 0 && pangkas > 0) {
+      return "tebang_dan_pangkas";
+    } else if (tebang > 0) {
+      return "tebang";
+    } else if (pangkas > 0) {
+      return "pangkas";
+    } else {
+      return "tidak_ada";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -392,6 +431,9 @@ function SurveyPageContent() {
         return;
       }
 
+      // Update tindakan berdasarkan jumlah tebang dan pangkas
+      const tindakan = updateTindakan(formData.jumlah_tebang, formData.jumlah_pangkas);
+
       // Prepare data for insert/update
       const surveyDataToSave = {
         permohonan_id: selectedPermohonan!.id,
@@ -406,7 +448,10 @@ function SurveyPageContent() {
         notes: formData.notes?.trim() || null,
         status: formData.status,
         updated_at: new Date().toISOString(),
-        updated_by: session.user.id
+        updated_by: session.user.id,
+        jumlah_tebang: formData.jumlah_tebang || 0,
+        jumlah_pangkas: formData.jumlah_pangkas || 0,
+        tindakan: tindakan
       };
 
       let surveyId: string;
@@ -543,6 +588,9 @@ function SurveyPageContent() {
   const handleDownloadReport = () => {
     if (!surveyData) return;
     
+    const totalTindakan = formData.jumlah_tebang + formData.jumlah_pangkas;
+    const sisaPohon = (selectedPermohonan?.jumlah_pohon || 0) - totalTindakan;
+    
     const report = `
 LAPORAN SURVEY LAPANGAN
 ======================
@@ -572,6 +620,17 @@ Tinggi: ${formData.height} meter
 Diameter: ${formData.diameter} cm
 Lebar Kanopi: ${formData.canopy_width} meter
 Skor Kesehatan: ${formData.health_score}/100
+
+TINDAKAN YANG DILAKUKAN
+-----------------------
+Jumlah Pohon ditebang: ${formData.jumlah_tebang} pohon
+Jumlah Pohon dipangkas: ${formData.jumlah_pangkas} pohon
+Total Tindakan: ${totalTindakan} pohon
+Sisa Pohon: ${sisaPohon} pohon
+Status Tindakan: ${formData.tindakan === 'tebang' ? 'Penebangan' : 
+                   formData.tindakan === 'pangkas' ? 'Pemangkasan' :
+                   formData.tindakan === 'tebang_dan_pangkas' ? 'Penebangan dan Pemangkasan' : 
+                   'Tidak Ada Tindakan'}
 
 REKOMENDASI
 -----------
@@ -617,35 +676,39 @@ Dilaporkan oleh: ${user?.email}
     return moment(dateString).format('DD MMMM YYYY');
   };
 
+  // Hitung total tindakan dan sisa pohon
+  const totalTindakan = formData.jumlah_tebang + formData.jumlah_pangkas;
+  const sisaPohon = (selectedPermohonan?.jumlah_pohon || 0) - totalTindakan;
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-emerald-50 to-teal-50">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-900 via-emerald-900 to-teal-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-3"></div>
-          <p className="text-gray-600">Memuat data survey...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-3"></div>
+          <p className="text-emerald-200">Memuat data survey...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Navigation */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/laporan"
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="inline-flex items-center gap-2 text-gray-300 hover:text-white transition-colors bg-gray-800/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-700 hover:border-emerald-500"
           >
             <ArrowLeft className="h-4 w-4" />
             Kembali ke Laporan
           </Link>
           
           {selectedPermohonan && (
-            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
-              <ClipboardList className="h-4 w-4 text-emerald-600" />
-              <span className="text-sm text-gray-600">
-                ID: <span className="font-mono text-xs">{selectedPermohonan?.id}</span>
+            <div className="flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-700">
+              <ClipboardList className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm text-gray-300">
+                ID: <span className="font-mono text-xs text-emerald-400">{selectedPermohonan?.id}</span>
               </span>
             </div>
           )}
@@ -653,10 +716,10 @@ Dilaporkan oleh: ${user?.email}
 
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-white mb-2">
             Survey Lapangan Pohon
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-400">
             Input hasil survey lapangan untuk permohonan yang sudah diajukan
           </p>
         </div>
@@ -664,21 +727,21 @@ Dilaporkan oleh: ${user?.email}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Permohonan List */}
           <div className="lg:col-span-1">
-            <Card className="p-6 h-full">
+            <Card className="p-6 h-full bg-gray-800/50 backdrop-blur-sm border-gray-700">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
+                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-emerald-400" />
                   Daftar Permohonan
                 </h2>
                 
                 {/* Search and Filter */}
                 <div className="space-y-3 mb-4">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <input
                       type="text"
                       placeholder="Cari permohonan..."
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full pl-10 pr-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white placeholder-gray-400"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -686,18 +749,18 @@ Dilaporkan oleh: ${user?.email}
                   
                   <div className="flex gap-2">
                     <select
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="flex-1 px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white"
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value)}
                     >
-                      <option value="all">Semua Status</option>
-                      <option value="pending">Menunggu</option>
-                      <option value="in_progress">Diproses</option>
-                      <option value="completed">Selesai</option>
+                      <option value="all" className="bg-gray-800">Semua Status</option>
+                      <option value="pending" className="bg-gray-800">Menunggu</option>
+                      <option value="in_progress" className="bg-gray-800">Diproses</option>
+                      <option value="completed" className="bg-gray-800">Selesai</option>
                     </select>
                     <button
                       onClick={fetchPermohonanList}
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
                       title="Refresh"
                     >
                       <RefreshCw className="h-4 w-4" />
@@ -708,8 +771,8 @@ Dilaporkan oleh: ${user?.email}
                 {/* Permohonan List */}
                 <div className="space-y-3 max-h-125 overflow-y-auto">
                   {filteredPermohonan.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <div className="text-center py-8 text-gray-400">
+                      <FileText className="h-12 w-12 mx-auto mb-3 text-gray-600" />
                       <p>Tidak ada permohonan ditemukan</p>
                     </div>
                   ) : (
@@ -718,45 +781,45 @@ Dilaporkan oleh: ${user?.email}
                         key={permohonan.id}
                         className={`p-4 border rounded-lg cursor-pointer transition-all ${
                           selectedPermohonan?.id === permohonan.id
-                            ? "border-emerald-500 bg-emerald-50"
-                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            ? "border-emerald-500 bg-emerald-900/20"
+                            : "border-gray-700 hover:border-gray-600 bg-gray-800/30 hover:bg-gray-800/50"
                         }`}
                         onClick={() => handlePermohonanSelect(permohonan)}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h3 className="font-medium text-gray-900 truncate">
+                            <h3 className="font-medium text-white truncate">
                               {permohonan.nama}
                             </h3>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-400 mt-1">
                               {permohonan.perihal}
                             </p>
                             <div className="flex items-center mt-2 gap-2">
                               <span className={`px-2 py-1 text-xs rounded-full ${
                                 permohonan.status === 'completed' 
-                                  ? 'bg-green-100 text-green-800'
+                                  ? 'bg-green-900/50 text-green-300 border border-green-700'
                                   : permohonan.status === 'in_progress'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-blue-900/50 text-blue-300 border border-blue-700'
+                                  : 'bg-yellow-900/50 text-yellow-300 border border-yellow-700'
                               }`}>
                                 {permohonan.status === 'completed' ? 'Selesai' : 
                                  permohonan.status === 'in_progress' ? 'Diproses' : 'Menunggu'}
                               </span>
                               {permohonan.jumlah_pohon > 0 && (
-                                <span className="px-2 py-1 text-xs bg-emerald-100 text-emerald-800 rounded-full">
+                                <span className="px-2 py-1 text-xs bg-emerald-900/50 text-emerald-300 rounded-full border border-emerald-700">
                                   <TreePine className="inline h-3 w-3 mr-1" />
                                   {permohonan.jumlah_pohon} pohon
                                 </span>
                               )}
                               {surveyData && selectedPermohonan?.id === permohonan.id && (
-                                <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                                <span className="px-2 py-1 text-xs bg-green-900/50 text-green-300 rounded-full border border-green-700">
                                   Sudah Survey
                                 </span>
                               )}
                             </div>
                           </div>
-                          <ChevronRight className={`h-5 w-5 text-gray-400 ${
-                            selectedPermohonan?.id === permohonan.id ? "text-emerald-500" : ""
+                          <ChevronRight className={`h-5 w-5 ${
+                            selectedPermohonan?.id === permohonan.id ? "text-emerald-400" : "text-gray-600"
                           }`} />
                         </div>
                       </div>
@@ -770,24 +833,24 @@ Dilaporkan oleh: ${user?.email}
           {/* Right Column - Survey Form */}
           <div className="lg:col-span-2">
             {!selectedPermohonan ? (
-              <Card className="p-12 text-center h-full flex flex-col items-center justify-center">
-                <TreePine className="h-20 w-20 text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              <Card className="p-12 text-center h-full flex flex-col items-center justify-center bg-gray-800/50 backdrop-blur-sm border-gray-700">
+                <TreePine className="h-20 w-20 text-gray-600 mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">
                   Pilih Permohonan
                 </h3>
-                <p className="text-gray-500 mb-6 max-w-md">
+                <p className="text-gray-400 mb-6 max-w-md">
                   Pilih salah satu permohonan dari daftar di samping untuk mengisi data survey lapangan
                 </p>
                 <div className="flex gap-3">
                   <Link
                     href="/input"
-                    className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="px-6 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-colors"
                   >
                     Buat Permohonan Baru
                   </Link>
                   <Link
                     href="/laporan"
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
                   >
                     Lihat Laporan
                   </Link>
@@ -796,10 +859,10 @@ Dilaporkan oleh: ${user?.email}
             ) : (
               <>
                 {/* Permohonan Info */}
-                <Card className="p-6 mb-6 border-0">
+                <Card className="p-6 mb-6 bg-gray-800/50 backdrop-blur-sm border-gray-700">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-emerald-800 mb-3 flex items-center">
+                      <h3 className="font-semibold text-emerald-400 mb-3 flex items-center">
                         <FileText className="h-5 w-5 mr-2" />
                         Data Permohonan Terpilih
                       </h3>
@@ -807,50 +870,50 @@ Dilaporkan oleh: ${user?.email}
                       {/* Info Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-emerald-600">Nama Pemohon</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan?.nama}</p>
+                          <p className="text-emerald-500">Nama Pemohon</p>
+                          <p className="font-medium text-white">{selectedPermohonan?.nama}</p>
                         </div>
                         <div>
-                          <p className="text-emerald-600">Perihal</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan?.perihal}</p>
+                          <p className="text-emerald-500">Perihal</p>
+                          <p className="font-medium text-white">{selectedPermohonan?.perihal}</p>
                         </div>
                         <div>
-                          <p className="text-emerald-600">Nomor Surat</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan?.nomor_surat}</p>
+                          <p className="text-emerald-500">Nomor Surat</p>
+                          <p className="font-medium text-white">{selectedPermohonan?.nomor_surat}</p>
                         </div>
                         <div>
-                          <p className="text-emerald-600">Tanggal Surat</p>
-                          <p className="font-medium text-gray-900">{formatDate(selectedPermohonan?.tanggal_surat || '-')}</p>
+                          <p className="text-emerald-500">Tanggal Surat</p>
+                          <p className="font-medium text-white">{formatDate(selectedPermohonan?.tanggal_surat || '-')}</p>
                         </div>
                         <div className="md:col-span-2">
-                          <p className="text-emerald-600">Alamat</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan?.alamat}</p>
+                          <p className="text-emerald-500">Alamat</p>
+                          <p className="font-medium text-white">{selectedPermohonan?.alamat}</p>
                         </div>
                         <div>
-                          <p className="text-emerald-600">Kontak</p>
-                          <p className="font-medium text-gray-900">{selectedPermohonan?.kontak || '-'}</p>
+                          <p className="text-emerald-500">Kontak</p>
+                          <p className="font-medium text-white">{selectedPermohonan?.kontak || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-emerald-600">Koordinat</p>
-                          <p className="font-mono text-sm text-gray-900">{selectedPermohonan?.koordinat}</p>
+                          <p className="text-emerald-500">Koordinat</p>
+                          <p className="font-mono text-sm text-white">{selectedPermohonan?.koordinat}</p>
                         </div>
                       </div>
 
                       {/* Jumlah Pohon dari Permohonan */}
-                      <div className="mt-4 p-4 bg-white rounded-lg border border-emerald-200">
+                      <div className="mt-4 p-4 bg-gray-700/30 rounded-lg border border-emerald-800">
                         <div className="flex items-start gap-3">
-                          <div className="p-2 bg-emerald-100 rounded-lg">
-                            <TreePine className="h-6 w-6 text-emerald-600" />
+                          <div className="p-2 bg-emerald-900/50 rounded-lg">
+                            <TreePine className="h-6 w-6 text-emerald-400" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-500 mb-1">
+                            <p className="text-sm font-medium text-gray-400 mb-1">
                               Jumlah Pohon dalam Permohonan
                             </p>
-                            <p className="text-3xl font-bold text-emerald-700">
+                            <p className="text-3xl font-bold text-emerald-400">
                               {selectedPermohonan?.jumlah_pohon || 0}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
-                              * Gunakan sebagai referensi untuk rekomendasi dan catatan survey
+                              * Gunakan sebagai referensi untuk tindakan yang akan dilakukan
                             </p>
                           </div>
                         </div>
@@ -860,14 +923,14 @@ Dilaporkan oleh: ${user?.email}
                     <div className="flex gap-2 ml-4">
                       <Link
                         href={`/edit/${selectedPermohonan?.id}`}
-                        className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                        className="p-2 text-emerald-400 hover:bg-emerald-900/30 rounded-lg transition-colors"
                         title="Edit Data Permohonan"
                       >
                         <Edit className="h-5 w-5" />
                       </Link>
                       <button
                         onClick={() => setSelectedPermohonan(null)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
                         title="Pilih Permohonan Lain"
                       >
                         <XCircle className="h-5 w-5" />
@@ -877,31 +940,31 @@ Dilaporkan oleh: ${user?.email}
                 </Card>
 
                 {/* Survey Form */}
-                <Card className="p-6 border-0 shadow-lg">
+                <Card className="p-6 bg-gray-800/50 backdrop-blur-sm border-gray-700">
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center">
-                      <Camera className="h-5 w-5 mr-2 text-emerald-600" />
+                    <h2 className="text-xl font-semibold text-white mb-2 flex items-center">
+                      <Camera className="h-5 w-5 mr-2 text-emerald-400" />
                       Form Survey Lapangan
                       {surveyData && (
-                        <span className="ml-3 px-3 py-1 text-xs bg-emerald-100 text-emerald-800 rounded-full">
+                        <span className="ml-3 px-3 py-1 text-xs bg-emerald-900/50 text-emerald-300 rounded-full border border-emerald-700">
                           Edit Mode
                         </span>
                       )}
                     </h2>
 
                     {/* Referensi Jumlah Pohon di Form Survey */}
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+                    <div className="p-4 bg-blue-900/20 rounded-lg border border-blue-800 mb-4">
                       <div className="flex items-start gap-3">
-                        <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                        <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-blue-800">
+                          <p className="text-sm font-medium text-blue-300">
                             Referensi Permohonan
                           </p>
-                          <p className="text-sm text-blue-700">
+                          <p className="text-sm text-blue-400">
                             Jumlah pohon yang diajukan: <span className="font-bold">{selectedPermohonan?.jumlah_pohon || 0} pohon</span>
                           </p>
-                          <p className="text-xs text-blue-600 mt-1">
-                            Data ini dapat digunakan sebagai pertimbangan dalam memberikan rekomendasi dan catatan survey.
+                          <p className="text-xs text-blue-500 mt-1">
+                            Data ini dapat digunakan sebagai pertimbangan dalam menentukan tindakan yang akan dilakukan.
                           </p>
                         </div>
                       </div>
@@ -910,13 +973,13 @@ Dilaporkan oleh: ${user?.email}
                     {/* Survey Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="group">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <Calendar className="inline h-4 w-4 mr-1 text-emerald-600" />
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <Calendar className="inline h-4 w-4 mr-1 text-emerald-400" />
                           Tanggal Survey *
                         </label>
                         <input
                           type="date"
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white"
                           value={formData.survey_date}
                           onChange={(e) => setFormData({...formData, survey_date: e.target.value})}
                           max={new Date().toISOString().split('T')[0]}
@@ -925,13 +988,13 @@ Dilaporkan oleh: ${user?.email}
                       </div>
 
                       <div className="group">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <User className="inline h-4 w-4 mr-1 text-emerald-600" />
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <User className="inline h-4 w-4 mr-1 text-emerald-400" />
                           Nama Surveyor *
                         </label>
                         <input
                           type="text"
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white placeholder-gray-500"
                           value={formData.surveyor_name}
                           onChange={(e) => setFormData({...formData, surveyor_name: e.target.value})}
                           placeholder="Nama lengkap surveyor"
@@ -940,60 +1003,60 @@ Dilaporkan oleh: ${user?.email}
                       </div>
 
                       <div className="group">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <Activity className="inline h-4 w-4 mr-1 text-emerald-600" />
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <Activity className="inline h-4 w-4 mr-1 text-emerald-400" />
                           Kondisi Pohon *
                         </label>
                         <select
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white"
                           value={formData.condition}
                           onChange={(e) => setFormData({...formData, condition: e.target.value as any})}
                           required
                         >
-                          <option value="baik">🌳 Baik</option>
-                          <option value="sedang">🌲 Sedang</option>
-                          <option value="buruk">🌴 Buruk</option>
-                          <option value="rawan_tumbang">⚠️ Rawan Tumbang</option>
+                          <option value="baik" className="bg-gray-800">🌳 Baik</option>
+                          <option value="sedang" className="bg-gray-800">🌲 Sedang</option>
+                          <option value="buruk" className="bg-gray-800">🌴 Buruk</option>
+                          <option value="rawan_tumbang" className="bg-gray-800">⚠️ Rawan Tumbang</option>
                         </select>
                       </div>
 
                       <div className="group">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <AlertCircle className="inline h-4 w-4 mr-1 text-emerald-600" />
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <AlertCircle className="inline h-4 w-4 mr-1 text-emerald-400" />
                           Status Survey *
                         </label>
                         <select
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white"
                           value={formData.status}
                           onChange={(e) => setFormData({...formData, status: e.target.value as any})}
                           required
                         >
-                          <option value="completed">✅ Selesai</option>
-                          <option value="pending">⏳ Menunggu</option>
-                          <option value="needs_followup">🔄 Butuh Tindak Lanjut</option>
+                          <option value="completed" className="bg-gray-800">✅ Selesai</option>
+                          <option value="pending" className="bg-gray-800">⏳ Menunggu</option>
+                          <option value="needs_followup" className="bg-gray-800">🔄 Butuh Tindak Lanjut</option>
                         </select>
                       </div>
                     </div>
 
                     {/* Tree Measurements */}
-                    <div className="p-6 bg-gray-50 rounded-xl">
-                      <h3 className="font-semibold text-emerald-800 mb-4 flex items-center">
+                    <div className="p-6 bg-gray-700/30 rounded-xl">
+                      <h3 className="font-semibold text-emerald-400 mb-4 flex items-center">
                         <Ruler className="h-5 w-5 mr-2" />
                         Pengukuran Pohon
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <Ruler className="inline h-4 w-4 mr-1 text-emerald-600" />
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <Ruler className="inline h-4 w-4 mr-1 text-emerald-400" />
                             Tinggi (meter)
                           </label>
                           <div className="relative">
-                            <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
                             <input
                               type="number"
                               step="0.1"
                               min="0"
-                              className="w-full pl-10 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                              className="w-full pl-10 px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white placeholder-gray-500"
                               value={formData.height}
                               onChange={(e) => setFormData({...formData, height: parseFloat(e.target.value) || 0})}
                               placeholder="0.0"
@@ -1002,17 +1065,17 @@ Dilaporkan oleh: ${user?.email}
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <Weight className="inline h-4 w-4 mr-1 text-emerald-600" />
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <Weight className="inline h-4 w-4 mr-1 text-emerald-400" />
                             Diameter (cm)
                           </label>
                           <div className="relative">
-                            <Weight className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Weight className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
                             <input
                               type="number"
                               step="0.1"
                               min="0"
-                              className="w-full pl-10 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                              className="w-full pl-10 px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white placeholder-gray-500"
                               value={formData.diameter}
                               onChange={(e) => setFormData({...formData, diameter: parseFloat(e.target.value) || 0})}
                               placeholder="0.0"
@@ -1021,17 +1084,17 @@ Dilaporkan oleh: ${user?.email}
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <ThermometerSun className="inline h-4 w-4 mr-1 text-emerald-600" />
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <ThermometerSun className="inline h-4 w-4 mr-1 text-emerald-400" />
                             Lebar Kanopi (meter)
                           </label>
                           <div className="relative">
-                            <ThermometerSun className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <ThermometerSun className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
                             <input
                               type="number"
                               step="0.1"
                               min="0"
-                              className="w-full pl-10 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                              className="w-full pl-10 px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white placeholder-gray-500"
                               value={formData.canopy_width}
                               onChange={(e) => setFormData({...formData, canopy_width: parseFloat(e.target.value) || 0})}
                               placeholder="0.0"
@@ -1041,10 +1104,110 @@ Dilaporkan oleh: ${user?.email}
                       </div>
                     </div>
 
+                    {/* Jumlah Pohon yang Ditindak */}
+                    <div className="p-6 bg-orange-900/20 rounded-xl border-2 border-orange-800">
+                      <h3 className="font-semibold text-orange-300 mb-4 flex items-center">
+                        <Trash2 className="h-5 w-5 mr-2" />
+                        Tindakan yang Dilakukan
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <Trash2 className="inline h-4 w-4 mr-1 text-red-400" />
+                            Jumlah Pohon Ditebang
+                          </label>
+                          <div className="relative">
+                            <Trash2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
+                            <input
+                              type="number"
+                              min="0"
+                              max={selectedPermohonan?.jumlah_pohon || 0}
+                              className="w-full pl-10 px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-white placeholder-gray-500"
+                              value={formData.jumlah_tebang}
+                              onChange={(e) => {
+                                const tebang = parseInt(e.target.value) || 0;
+                                setFormData({
+                                  ...formData, 
+                                  jumlah_tebang: Math.min(tebang, selectedPermohonan?.jumlah_pohon || 0),
+                                  tindakan: updateTindakan(tebang, formData.jumlah_pangkas)
+                                });
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Maksimal {selectedPermohonan?.jumlah_pohon || 0} pohon
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <Scissors className="inline h-4 w-4 mr-1 text-orange-400" />
+                            Jumlah Pohon Dipangkas
+                          </label>
+                          <div className="relative">
+                            <Scissors className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
+                            <input
+                              type="number"
+                              min="0"
+                              max={selectedPermohonan?.jumlah_pohon || 0}
+                              className="w-full pl-10 px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-white placeholder-gray-500"
+                              value={formData.jumlah_pangkas}
+                              onChange={(e) => {
+                                const pangkas = parseInt(e.target.value) || 0;
+                                setFormData({
+                                  ...formData, 
+                                  jumlah_pangkas: Math.min(pangkas, selectedPermohonan?.jumlah_pohon || 0),
+                                  tindakan: updateTindakan(formData.jumlah_tebang, pangkas)
+                                });
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Maksimal {selectedPermohonan?.jumlah_pohon || 0} pohon
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Ringkasan Tindakan */}
+                      <div className="mt-4 p-4 bg-gray-800/50 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="text-center p-3 bg-red-900/30 rounded-lg border border-red-800">
+                            <p className="text-sm text-red-300 font-medium">Ditebang</p>
+                            <p className="text-2xl font-bold text-red-400">{formData.jumlah_tebang}</p>
+                          </div>
+                          <div className="text-center p-3 bg-orange-900/30 rounded-lg border border-orange-800">
+                            <p className="text-sm text-orange-300 font-medium">Dipangkas</p>
+                            <p className="text-2xl font-bold text-orange-400">{formData.jumlah_pangkas}</p>
+                          </div>
+                          <div className="text-center p-3 bg-green-900/30 rounded-lg border border-green-800">
+                            <p className="text-sm text-green-300 font-medium">Sisa</p>
+                            <p className="text-2xl font-bold text-green-400">{sisaPohon}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
+                            formData.tindakan === 'tebang' ? 'bg-red-900/30 text-red-300 border-red-700' :
+                            formData.tindakan === 'pangkas' ? 'bg-orange-900/30 text-orange-300 border-orange-700' :
+                            formData.tindakan === 'tebang_dan_pangkas' ? 'bg-purple-900/30 text-purple-300 border-purple-700' :
+                            'bg-gray-700 text-gray-300 border-gray-600'
+                          }`}>
+                            {formData.tindakan === 'tebang' && '🔴 Penebangan'}
+                            {formData.tindakan === 'pangkas' && '🟠 Pemangkasan'}
+                            {formData.tindakan === 'tebang_dan_pangkas' && '🟣 Penebangan & Pemangkasan'}
+                            {formData.tindakan === 'tidak_ada' && '⚪ Tidak Ada Tindakan'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Health Score */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <Activity className="inline h-4 w-4 mr-1 text-emerald-600" />
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Activity className="inline h-4 w-4 mr-1 text-emerald-400" />
                         Skor Kesehatan: {formData.health_score}/100
                       </label>
                       <input
@@ -1052,7 +1215,7 @@ Dilaporkan oleh: ${user?.email}
                         min="0"
                         max="100"
                         step="1"
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                         value={formData.health_score}
                         onChange={(e) => setFormData({...formData, health_score: parseInt(e.target.value)})}
                       />
@@ -1066,15 +1229,15 @@ Dilaporkan oleh: ${user?.email}
                     {/* Recommendations and Notes */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
                           Rekomendasi
-                          <span className="ml-2 text-xs text-emerald-600">
+                          <span className="ml-2 text-xs text-emerald-500">
                             (berdasarkan {selectedPermohonan?.jumlah_pohon || 0} pohon)
                           </span>
                         </label>
                         <textarea
                           rows={4}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white placeholder-gray-500"
                           value={formData.recommendations}
                           onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
                           placeholder={`Rekomendasi untuk ${selectedPermohonan?.jumlah_pohon || 0} pohon...`}
@@ -1082,15 +1245,15 @@ Dilaporkan oleh: ${user?.email}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
                           Catatan Tambahan
-                          <span className="ml-2 text-xs text-emerald-600">
+                          <span className="ml-2 text-xs text-emerald-500">
                             (referensi dari permohonan)
                           </span>
                         </label>
                         <textarea
                           rows={4}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all"
+                          className="w-full px-4 py-3 bg-gray-700/50 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white placeholder-gray-500"
                           value={formData.notes}
                           onChange={(e) => setFormData({...formData, notes: e.target.value})}
                           placeholder={`Catatan survey untuk ${selectedPermohonan?.jumlah_pohon || 0} pohon...`}
@@ -1100,19 +1263,19 @@ Dilaporkan oleh: ${user?.email}
 
                     {/* Photo Upload */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <Camera className="inline h-4 w-4 mr-1 text-emerald-600" />
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Camera className="inline h-4 w-4 mr-1 text-emerald-400" />
                         Foto Dokumentasi (Maksimal 10 foto)
                       </label>
                       
                       {/* Existing Photos */}
                       {existingPhotos.length > 0 && (
                         <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Foto yang sudah diupload:</h4>
+                          <h4 className="text-sm font-medium text-gray-300 mb-2">Foto yang sudah diupload:</h4>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {existingPhotos.map((photo) => (
                               <div key={photo.id} className="relative group">
-                                <div className="aspect-square overflow-hidden rounded-lg border-2 border-gray-200">
+                                <div className="aspect-square overflow-hidden rounded-lg border-2 border-gray-700">
                                   <img
                                     src={photo.url}
                                     alt={photo.description || "Survey photo"}
@@ -1122,12 +1285,12 @@ Dilaporkan oleh: ${user?.email}
                                 <button
                                   type="button"
                                   onClick={() => removeExistingPhoto(photo.id)}
-                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                  className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                                 >
                                   <XCircle className="h-4 w-4" />
                                 </button>
                                 <div className="absolute bottom-2 left-2 right-2">
-                                  <p className="text-xs text-white bg-black/50 px-2 py-1 rounded truncate">
+                                  <p className="text-xs text-white bg-black/70 px-2 py-1 rounded truncate">
                                     {moment(photo.created_at).format('DD/MM/YY')}
                                   </p>
                                 </div>
@@ -1138,7 +1301,7 @@ Dilaporkan oleh: ${user?.email}
                       )}
 
                       {/* New Photo Upload */}
-                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors">
+                      <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors">
                         <input
                           type="file"
                           id="photo-upload"
@@ -1148,8 +1311,8 @@ Dilaporkan oleh: ${user?.email}
                           className="hidden"
                         />
                         <label htmlFor="photo-upload" className="cursor-pointer">
-                          <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                          <p className="text-sm text-gray-600 mb-2 font-medium">
+                          <Upload className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                          <p className="text-sm text-gray-300 mb-2 font-medium">
                             Klik atau drag & drop foto di sini
                           </p>
                           <p className="text-xs text-gray-500">
@@ -1161,11 +1324,11 @@ Dilaporkan oleh: ${user?.email}
                       {/* Photo Previews */}
                       {previewUrls.length > 0 && (
                         <div className="mt-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Foto baru:</h4>
+                          <h4 className="text-sm font-medium text-gray-300 mb-2">Foto baru:</h4>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {previewUrls.map((url, index) => (
                               <div key={index} className="relative group">
-                                <div className="aspect-square overflow-hidden rounded-lg border-2 border-emerald-200">
+                                <div className="aspect-square overflow-hidden rounded-lg border-2 border-emerald-700">
                                   <img
                                     src={url}
                                     alt={`Preview ${index + 1}`}
@@ -1175,19 +1338,19 @@ Dilaporkan oleh: ${user?.email}
                                 <button
                                   type="button"
                                   onClick={() => removePhoto(index)}
-                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                  className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                                 >
                                   <XCircle className="h-4 w-4" />
                                 </button>
                                 <div className="absolute bottom-2 left-2 right-2">
-                                  <p className="text-xs text-white bg-black/50 px-2 py-1 rounded truncate">
+                                  <p className="text-xs text-white bg-black/70 px-2 py-1 rounded truncate">
                                     {photos[index].name}
                                   </p>
                                 </div>
                               </div>
                             ))}
                           </div>
-                          <p className="text-sm text-gray-500 mt-2">
+                          <p className="text-sm text-gray-400 mt-2">
                             {photos.length} foto siap diupload
                           </p>
                         </div>
@@ -1195,11 +1358,11 @@ Dilaporkan oleh: ${user?.email}
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-3 pt-6 border-t-2 border-gray-100">
+                    <div className="flex flex-wrap gap-3 pt-6 border-t-2 border-gray-700">
                       <button
                         type="submit"
                         disabled={uploading}
-                        className="px-8 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-2 transition-all shadow-lg shadow-emerald-200"
+                        className="px-8 py-3 bg-linear-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center gap-2 transition-all shadow-lg shadow-emerald-900/30"
                       >
                         {uploading ? (
                           <>
@@ -1218,7 +1381,7 @@ Dilaporkan oleh: ${user?.email}
                         <button
                           type="button"
                           onClick={handleDownloadReport}
-                          className="px-8 py-3 bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 font-semibold flex items-center gap-2 transition-all shadow-lg shadow-purple-200"
+                          className="px-8 py-3 bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 font-semibold flex items-center gap-2 transition-all shadow-lg shadow-purple-900/30"
                         >
                           <Download className="h-5 w-5" />
                           Download Laporan
@@ -1227,7 +1390,7 @@ Dilaporkan oleh: ${user?.email}
                       
                       <Link
                         href="/laporan"
-                        className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium flex items-center gap-2 transition-colors"
+                        className="px-8 py-3 border-2 border-gray-700 text-gray-300 rounded-xl hover:bg-gray-700 font-medium flex items-center gap-2 transition-colors"
                       >
                         <ArrowLeft className="h-5 w-5" />
                         Kembali ke Laporan
@@ -1248,10 +1411,10 @@ Dilaporkan oleh: ${user?.email}
 export default function SurveyPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-emerald-50 to-teal-50">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-900 via-emerald-900 to-teal-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-3"></div>
-          <p className="text-gray-600">Memuat halaman survey...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-3"></div>
+          <p className="text-emerald-200">Memuat halaman survey...</p>
         </div>
       </div>
     }>
