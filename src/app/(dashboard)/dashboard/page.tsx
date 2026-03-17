@@ -66,6 +66,8 @@ interface MonthlyData {
   pemeliharaan: number
   pemangkasan: number
   penebangan: number
+  jumlah_tebang: number
+  jumlah_pangkas: number
 }
 
 interface MapLocation {
@@ -120,6 +122,22 @@ interface PemantauanPohonRow {
   user_id: string
   created_at: string
   updated_at: string
+}
+
+// Interface untuk data survey lapangan
+interface SurveyLapanganRow {
+  id: string
+  pemantauan_id: string
+  jumlah_pangkas: number
+  jumlah_tebang: number
+  created_at: string
+  updated_at: string
+  pemantauan_pohon?: {
+    type: string
+    nama: string
+    alamat: string
+    user_id: string
+  }
 }
 
 export default function DashboardPage() {
@@ -210,10 +228,17 @@ export default function DashboardPage() {
 
         if (allError) throw allError
 
+        // Fetch semua data dari tabel survey_lapangan
+        const { data: surveyData, error: surveyError } = await supabase
+          .from('survey_lapangan')
+          .select('*, pemantauan_pohon(*)')
+
+        if (surveyError) throw surveyError
+
         // Hitung total data
         setTotalData(allData?.length || 0)
 
-        // Hitung statistik berdasarkan periode
+        // Hitung statistik berdasarkan periode dari pemantauan_pohon
         const currentData = allData?.filter(item => 
           new Date(item.created_at) >= new Date(startDateStr)
         ) || []
@@ -223,17 +248,31 @@ export default function DashboardPage() {
           new Date(item.created_at) < new Date(startDateStr)
         ) || []
 
-        // Hitung total periode sekarang
+        // Filter survey data berdasarkan periode
+        const currentSurveyData = surveyData?.filter(item => 
+          new Date(item.created_at) >= new Date(startDateStr)
+        ) || []
+
+        const previousSurveyData = surveyData?.filter(item => 
+          new Date(item.created_at) >= new Date(previousStartDateStr) &&
+          new Date(item.created_at) < new Date(startDateStr)
+        ) || []
+
+        // Hitung total periode sekarang dari pemantauan_pohon
         const totalPermohonan = currentData.filter(item => item.type === 'permohonan').length
         const totalPemeliharaan = currentData.filter(item => item.type === 'pemeliharaan').length
-        const totalPohonDipangkas = currentData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0)
-        const totalPohonDitebang = currentData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
         
-        // Hitung total periode sebelumnya
+        // Hitung total pohon dari survey_lapangan (lebih akurat)
+        const totalPohonDipangkas = currentSurveyData.reduce((acc, curr) => acc + (curr.jumlah_pangkas || 0), 0)
+        const totalPohonDitebang = currentSurveyData.reduce((acc, curr) => acc + (curr.jumlah_tebang || 0), 0)
+        
+        // Hitung total periode sebelumnya dari survey_lapangan
+        const prevPemangkasan = previousSurveyData.reduce((acc, curr) => acc + (curr.jumlah_pangkas || 0), 0)
+        const prevPenebangan = previousSurveyData.reduce((acc, curr) => acc + (curr.jumlah_tebang || 0), 0)
+        
+        // Hitung total periode sebelumnya dari pemantauan_pohon untuk growth permohonan & pemeliharaan
         const prevPermohonan = previousData.filter(item => item.type === 'permohonan').length
         const prevPemeliharaan = previousData.filter(item => item.type === 'pemeliharaan').length
-        const prevPemangkasan = previousData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0)
-        const prevPenebangan = previousData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
         
         // Hitung growth secara dinamis
         const calculateGrowth = (current: number, previous: number) => {
@@ -252,7 +291,7 @@ export default function DashboardPage() {
           penebanganGrowth: calculateGrowth(totalPohonDitebang, prevPenebangan)
         })
 
-        // Process monthly data untuk chart (6 bulan terakhir)
+        // Process monthly data untuk chart (6 bulan terakhir) dari kedua tabel
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
         const monthlyStats: MonthlyData[] = []
         
@@ -262,7 +301,14 @@ export default function DashboardPage() {
           const monthStart = new Date(month.getFullYear(), month.getMonth(), 1)
           const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0)
           
+          // Data dari pemantauan_pohon
           const monthData = allData?.filter(item => {
+            const date = new Date(item.created_at)
+            return date >= monthStart && date <= monthEnd
+          }) || []
+
+          // Data dari survey_lapangan
+          const monthSurveyData = surveyData?.filter(item => {
             const date = new Date(item.created_at)
             return date >= monthStart && date <= monthEnd
           }) || []
@@ -271,8 +317,10 @@ export default function DashboardPage() {
             month: months[month.getMonth()],
             permohonan: monthData.filter(item => item.type === 'permohonan').length,
             pemeliharaan: monthData.filter(item => item.type === 'pemeliharaan').length,
-            pemangkasan: monthData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0),
-            penebangan: monthData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
+            pemangkasan: monthSurveyData.reduce((acc, curr) => acc + (curr.jumlah_pangkas || 0), 0),
+            penebangan: monthSurveyData.reduce((acc, curr) => acc + (curr.jumlah_tebang || 0), 0),
+            jumlah_tebang: 0,
+            jumlah_pangkas: 0
           })
         }
 
@@ -321,7 +369,7 @@ export default function DashboardPage() {
           return ['pending', 'completed', 'in_progress'].includes(status)
         }
 
-        // Process map locations
+        // Process map locations dari pemantauan_pohon
         const locations = allData
           ?.filter(item => item.koordinat && typeof item.koordinat === 'string')
           .map(item => {
@@ -371,31 +419,81 @@ export default function DashboardPage() {
           }
         }
 
-        // Process recent activities dengan nama user dari profilesMap
-        const activities = allData
-          ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 5)
-          .map(item => {
-            const userProfile = profilesMap[item.user_id]
+        // Process recent activities dari kedua tabel
+        const activities: RecentActivity[] = []
+
+        // Tambahkan aktivitas dari pemantauan_pohon
+        allData?.forEach(item => {
+          const userProfile = profilesMap[item.user_id]
+          const userName = userProfile?.full_name || 
+                          userProfile?.email?.split('@')[0] || 
+                          'Pengguna'
+          
+          activities.push({
+            id: `pohon-${item.id}`,
+            user_id: item.user_id,
+            user_name: userName,
+            user_email: userProfile?.email,
+            action: `${item.type === 'permohonan' ? 'Permohonan' : 'Pemeliharaan'} - ${item.perihal || item.nama || ''}`,
+            created_at: item.created_at,
+            status: item.status as 'completed' | 'pending' | 'in_progress',
+            type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
+            location: item.alamat
+          })
+        })
+
+        // Tambahkan aktivitas dari survey_lapangan
+        surveyData?.forEach(item => {
+          const pemantauan = item.pemantauan_pohon
+          if (pemantauan) {
+            const userProfile = profilesMap[pemantauan.user_id]
             const userName = userProfile?.full_name || 
                             userProfile?.email?.split('@')[0] || 
                             'Pengguna'
             
-            return {
-              id: item.id,
-              user_id: item.user_id,
+            // Tentukan aksi berdasarkan jumlah pohon
+            let action = 'Survey Lapangan - '
+            if (item.jumlah_pangkas > 0 && item.jumlah_tebang > 0) {
+              action += `${item.jumlah_pangkas} pohon dipangkas, ${item.jumlah_tebang} pohon ditebang`
+            } else if (item.jumlah_pangkas > 0) {
+              action += `${item.jumlah_pangkas} pohon dipangkas`
+            } else if (item.jumlah_tebang > 0) {
+              action += `${item.jumlah_tebang} pohon ditebang`
+            } else {
+              action += 'Survey dilakukan'
+            }
+
+            // Tentukan tipe berdasarkan data
+            let type: 'pemangkasan' | 'penebangan' | 'pemeliharaan' = 'pemeliharaan'
+            if (item.jumlah_pangkas > 0 && item.jumlah_tebang === 0) {
+              type = 'pemangkasan'
+            } else if (item.jumlah_tebang > 0 && item.jumlah_pangkas === 0) {
+              type = 'penebangan'
+            } else if (item.jumlah_pangkas > 0 && item.jumlah_tebang > 0) {
+              type = 'pemeliharaan'
+            }
+
+            activities.push({
+              id: `survey-${item.id}`,
+              user_id: pemantauan.user_id,
               user_name: userName,
               user_email: userProfile?.email,
-              action: `${item.type === 'permohonan' ? 'Permohonan' : 'Pemeliharaan'} - ${item.perihal || item.nama || ''}`,
+              action,
               created_at: item.created_at,
-              status: item.status as 'completed' | 'pending' | 'in_progress',
-              type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-              location: item.alamat
-            }
-          }) || []
+              status: 'completed', // Survey selalu completed
+              type,
+              location: pemantauan.alamat
+            })
+          }
+        })
 
-        console.log('Recent activities:', activities)
-        setRecentActivities(activities)
+        // Urutkan berdasarkan created_at terbaru dan ambil 5
+        const sortedActivities = activities
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5)
+
+        console.log('Recent activities:', sortedActivities)
+        setRecentActivities(sortedActivities)
 
       } catch (error: any) {
         console.error('Error fetching dashboard data:', error)
@@ -454,10 +552,17 @@ export default function DashboardPage() {
 
       if (allError) throw allError
 
+      // Fetch semua data dari tabel survey_lapangan
+      const { data: surveyData, error: surveyError } = await supabase
+        .from('survey_lapangan')
+        .select('*, pemantauan_pohon(*)')
+
+      if (surveyError) throw surveyError
+
       // Hitung total data
       setTotalData(allData?.length || 0)
 
-      // Hitung statistik berdasarkan periode
+      // Hitung statistik berdasarkan periode dari pemantauan_pohon
       const currentData = allData?.filter(item => 
         new Date(item.created_at) >= new Date(startDateStr)
       ) || []
@@ -467,17 +572,31 @@ export default function DashboardPage() {
         new Date(item.created_at) < new Date(startDateStr)
       ) || []
 
-      // Hitung total periode sekarang
+      // Filter survey data berdasarkan periode
+      const currentSurveyData = surveyData?.filter(item => 
+        new Date(item.created_at) >= new Date(startDateStr)
+      ) || []
+
+      const previousSurveyData = surveyData?.filter(item => 
+        new Date(item.created_at) >= new Date(previousStartDateStr) &&
+        new Date(item.created_at) < new Date(startDateStr)
+      ) || []
+
+      // Hitung total periode sekarang dari pemantauan_pohon
       const totalPermohonan = currentData.filter(item => item.type === 'permohonan').length
       const totalPemeliharaan = currentData.filter(item => item.type === 'pemeliharaan').length
-      const totalPohonDipangkas = currentData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0)
-      const totalPohonDitebang = currentData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
       
-      // Hitung total periode sebelumnya
+      // Hitung total pohon dari survey_lapangan (lebih akurat)
+      const totalPohonDipangkas = currentSurveyData.reduce((acc, curr) => acc + (curr.jumlah_pangkas || 0), 0)
+      const totalPohonDitebang = currentSurveyData.reduce((acc, curr) => acc + (curr.jumlah_tebang || 0), 0)
+      
+      // Hitung total periode sebelumnya dari survey_lapangan
+      const prevPemangkasan = previousSurveyData.reduce((acc, curr) => acc + (curr.jumlah_pangkas || 0), 0)
+      const prevPenebangan = previousSurveyData.reduce((acc, curr) => acc + (curr.jumlah_tebang || 0), 0)
+      
+      // Hitung total periode sebelumnya dari pemantauan_pohon untuk growth permohonan & pemeliharaan
       const prevPermohonan = previousData.filter(item => item.type === 'permohonan').length
       const prevPemeliharaan = previousData.filter(item => item.type === 'pemeliharaan').length
-      const prevPemangkasan = previousData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0)
-      const prevPenebangan = previousData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
       
       // Hitung growth secara dinamis
       const calculateGrowth = (current: number, previous: number) => {
@@ -496,7 +615,7 @@ export default function DashboardPage() {
         penebanganGrowth: calculateGrowth(totalPohonDitebang, prevPenebangan)
       })
 
-      // Process monthly data untuk chart (6 bulan terakhir)
+      // Process monthly data untuk chart (6 bulan terakhir) dari kedua tabel
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
       const monthlyStats: MonthlyData[] = []
       
@@ -506,7 +625,14 @@ export default function DashboardPage() {
         const monthStart = new Date(month.getFullYear(), month.getMonth(), 1)
         const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0)
         
+        // Data dari pemantauan_pohon
         const monthData = allData?.filter(item => {
+          const date = new Date(item.created_at)
+          return date >= monthStart && date <= monthEnd
+        }) || []
+
+        // Data dari survey_lapangan
+        const monthSurveyData = surveyData?.filter(item => {
           const date = new Date(item.created_at)
           return date >= monthStart && date <= monthEnd
         }) || []
@@ -515,8 +641,10 @@ export default function DashboardPage() {
           month: months[month.getMonth()],
           permohonan: monthData.filter(item => item.type === 'permohonan').length,
           pemeliharaan: monthData.filter(item => item.type === 'pemeliharaan').length,
-          pemangkasan: monthData.reduce((acc, curr) => acc + (curr.pemangkasan || 0), 0),
-          penebangan: monthData.reduce((acc, curr) => acc + (curr.penebangan || 0), 0)
+          pemangkasan: monthSurveyData.reduce((acc, curr) => acc + (curr.jumlah_pangkas || 0), 0),
+          penebangan: monthSurveyData.reduce((acc, curr) => acc + (curr.jumlah_tebang || 0), 0),
+          jumlah_tebang: 0,
+          jumlah_pangkas: 0
         })
       }
 
@@ -614,30 +742,80 @@ export default function DashboardPage() {
         }
       }
 
-      // Process recent activities dengan nama user dari profilesMap
-      const activities = allData
-        ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5)
-        .map(item => {
-          const userProfile = profilesMap[item.user_id]
+      // Process recent activities dari kedua tabel
+      const activities: RecentActivity[] = []
+
+      // Tambahkan aktivitas dari pemantauan_pohon
+      allData?.forEach(item => {
+        const userProfile = profilesMap[item.user_id]
+        const userName = userProfile?.full_name || 
+                        userProfile?.email?.split('@')[0] || 
+                        'Pengguna'
+        
+        activities.push({
+          id: `pohon-${item.id}`,
+          user_id: item.user_id,
+          user_name: userName,
+          user_email: userProfile?.email,
+          action: `${item.type === 'permohonan' ? 'Permohonan' : 'Pemeliharaan'} - ${item.perihal || item.nama || ''}`,
+          created_at: item.created_at,
+          status: item.status as 'completed' | 'pending' | 'in_progress',
+          type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
+          location: item.alamat
+        })
+      })
+
+      // Tambahkan aktivitas dari survey_lapangan
+      surveyData?.forEach(item => {
+        const pemantauan = item.pemantauan_pohon
+        if (pemantauan) {
+          const userProfile = profilesMap[pemantauan.user_id]
           const userName = userProfile?.full_name || 
                           userProfile?.email?.split('@')[0] || 
                           'Pengguna'
           
-          return {
-            id: item.id,
-            user_id: item.user_id,
+          // Tentukan aksi berdasarkan jumlah pohon
+          let action = 'Survey Lapangan - '
+          if (item.jumlah_pangkas > 0 && item.jumlah_tebang > 0) {
+            action += `${item.jumlah_pangkas} pohon dipangkas, ${item.jumlah_tebang} pohon ditebang`
+          } else if (item.jumlah_pangkas > 0) {
+            action += `${item.jumlah_pangkas} pohon dipangkas`
+          } else if (item.jumlah_tebang > 0) {
+            action += `${item.jumlah_tebang} pohon ditebang`
+          } else {
+            action += 'Survey dilakukan'
+          }
+
+          // Tentukan tipe berdasarkan data
+          let type: 'pemangkasan' | 'penebangan' | 'pemeliharaan' = 'pemeliharaan'
+          if (item.jumlah_pangkas > 0 && item.jumlah_tebang === 0) {
+            type = 'pemangkasan'
+          } else if (item.jumlah_tebang > 0 && item.jumlah_pangkas === 0) {
+            type = 'penebangan'
+          } else if (item.jumlah_pangkas > 0 && item.jumlah_tebang > 0) {
+            type = 'pemeliharaan'
+          }
+
+          activities.push({
+            id: `survey-${item.id}`,
+            user_id: pemantauan.user_id,
             user_name: userName,
             user_email: userProfile?.email,
-            action: `${item.type === 'permohonan' ? 'Permohonan' : 'Pemeliharaan'} - ${item.perihal || item.nama || ''}`,
+            action,
             created_at: item.created_at,
-            status: item.status as 'completed' | 'pending' | 'in_progress',
-            type: item.type as 'permohonan' | 'pemeliharaan' | 'pemangkasan' | 'penebangan',
-            location: item.alamat
-          }
-        }) || []
+            status: 'completed', // Survey selalu completed
+            type,
+            location: pemantauan.alamat
+          })
+        }
+      })
 
-      setRecentActivities(activities)
+      // Urutkan berdasarkan created_at terbaru dan ambil 5
+      const sortedActivities = activities
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5)
+
+      setRecentActivities(sortedActivities)
 
       toast.success('Data berhasil diperbarui')
     } catch (error: any) {
@@ -791,7 +969,7 @@ export default function DashboardPage() {
                 {getUserDisplayName()}
               </span>
               <span className="text-gray-500 ml-2">
-                • Total Data: {formatNumber(totalData)} records
+                • Total Data: {formatNumber(totalData)} records • Total Survey: {formatNumber(monthlyData.reduce((acc, curr) => acc + curr.pemangkasan + curr.penebangan, 0) > 0 ? 1 : 0)} aktivitas
               </span>
             </p>
           </div>
@@ -912,7 +1090,7 @@ export default function DashboardPage() {
                 <TreePine className="h-5 w-5 text-emerald-400" />
                 Pohon Dipangkas vs Ditebang
               </h3>
-              <p className="text-sm text-gray-400 mt-1">Data 6 bulan terakhir</p>
+              <p className="text-sm text-gray-400 mt-1">Data survey lapangan 6 bulan terakhir</p>
             </div>
           </div>
           <div className="h-75">
@@ -937,7 +1115,7 @@ export default function DashboardPage() {
                 <Activity className="h-5 w-5 text-emerald-400" />
                 Aktivitas Terbaru
               </h3>
-              <p className="text-sm text-gray-400 mt-1">5 aktivitas terakhir</p>
+              <p className="text-sm text-gray-400 mt-1">5 aktivitas terakhir dari pemantauan dan survey</p>
             </div>
             <Link 
               href="/laporan"
