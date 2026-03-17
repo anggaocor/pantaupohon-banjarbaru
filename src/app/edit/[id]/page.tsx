@@ -75,31 +75,31 @@ export default function EditPage() {
 
   // Data mapping kecamatan dan kelurahan
   const dataKelurahan: Record<string, string[]> = {
-    "Banjar Barat": [
+    "Banjarbaru Selatan": [
       "Guntung Paikat",
       "Kemuning", 
       "Loktabat Selatan",
       "Sungai Besar"
     ],
-    "Banjar Timur": [
+    "Banjarbaru Utara": [
       "Loktabat Utara",
       "Mentaos",
       "Komet",
       "Sungai Ulin"
     ],
-    "Banjar Utara": [
+    "Cempaka": [
       "Bangkal",
       "Cempaka",
       "Palam",
       "Sungai Tiung"
     ],
-    "Banjar Selatan": [
+    "Landasan Ulin": [
       "Guntung Manggis",
       "Guntung Payung",
       "Landasan Ulin Timur",
       "Syamsudin Noor"
     ],
-    "Banjar Tengah": [
+    "Liang Anggang": [
       "Landasan Ulin Barat",
       "Landasan Ulin Selatan",
       "Landasan Ulin Tengah",
